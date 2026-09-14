@@ -14,7 +14,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
 import lombok.NoArgsConstructor;
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * <p>
@@ -43,9 +43,12 @@ public class User implements Serializable {
     @TableField("username")
     private String username;
 
+    // 只允许写入（反序列化），禁止读出（序列化输出），避免密码哈希随 userInfo 外泄。
+    // 注意：不可改用 @JsonIgnore —— 它会同时阻断反序列化，导致 POST /user/login
+    // 的 @RequestBody User 拿不到 password，认证失败返回 500。
     @ApiModelProperty(value = "密码（不为空，不含SQL注入特殊字符，加密存储）")
     @TableField("password")
-    @JsonIgnore
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
     @ApiModelProperty(value = "角色（0-游客，1-普通用户，2-医生，3-医生管理员，4-超级管理员，默认1）")
