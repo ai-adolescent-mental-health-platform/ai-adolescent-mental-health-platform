@@ -42,10 +42,7 @@ public class OmniRealtimeWebSocketProxy {
     @Value("${dashscope.api.key:}")
     public void setApiKey(String apiKey) {
         apiKeyStatic = apiKey;
-        log.info("[DashScope] API Key 已加载: {}", 
-                apiKey != null && !apiKey.isEmpty() 
-                    ? apiKey.substring(0, Math.min(10, apiKey.length())) + "..." 
-                    : "null");
+        log.info("[DashScope] API Key 已加载: {}", apiKey != null && !apiKey.isEmpty() ? "yes" : "null");
     }
     
     private static HotSessionManager hotSessionManager;

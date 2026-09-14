@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.Version;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -49,6 +50,11 @@ public class PsychologistBalance implements Serializable {
     @ApiModelProperty(value = "冻结金额")
     @TableField("frozen_amount")
     private BigDecimal frozenAmount;
+
+    @ApiModelProperty(value = "乐观锁版本号")
+    @TableField("version")
+    @Version
+    private Integer version;
 
     @ApiModelProperty(value = "创建时间")
     @TableField("create_time")

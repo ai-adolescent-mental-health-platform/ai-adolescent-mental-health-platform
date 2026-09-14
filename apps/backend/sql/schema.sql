@@ -8,8 +8,6 @@ create table if not exists xinyuzhilian.ai_message
     create_time datetime default CURRENT_TIMESTAMP null
 );
 
-create index id_session_id
-    on xinyuzhilian.ai_message (session_id);
 
 create index idx_session_id
     on xinyuzhilian.ai_message (session_id);
@@ -27,24 +25,6 @@ create table if not exists xinyuzhilian.ai_session
 create index idx_user_id
     on xinyuzhilian.ai_session (user_id);
 
-create table if not exists xinyuzhilian.appointment
-(
-    id                 bigint auto_increment
-        primary key,
-    user_id            bigint                                   not null comment '用户ID',
-    patient_contact_id bigint                                   null comment '就诊人ID',
-    doctor_id          bigint                                   not null comment '医生ID',
-    schedule_id        bigint                                   not null comment '排班ID',
-    status             int            default 0                 null comment '状态(0-待就诊, 1-已完成, 2-已取消, 3-爽约)',
-    create_time        datetime       default CURRENT_TIMESTAMP null,
-    description        varchar(1000)                            null comment '病情描述/病例表',
-    fee                decimal(10, 2) default 0.00              null comment '挂号费',
-    pay_status         int            default 0                 null comment '支付状态(0-未支付, 1-已支付, 2-已退款)',
-    pay_time           datetime                                 null comment '支付时间',
-    type               int            default 0                 null comment '0-offline, 1-online',
-    is_rescheduled     int            default 0                 null comment '0-no, 1-yes'
-)
-    comment '预约记录表';
 
 create table if not exists xinyuzhilian.article
 (
@@ -75,7 +55,8 @@ create table if not exists xinyuzhilian.assessment_record
     answers_json    json                               not null comment '用户作答JSON',
     result_score    int      default 0                 null comment '总分',
     result_analysis text                               null comment '结果分析结论',
-    create_time     datetime default CURRENT_TIMESTAMP null
+    create_time     datetime default CURRENT_TIMESTAMP null,
+    patient_contact_id bigint                          null comment '就诊人ID'
 )
     comment '测评记录表';
 
@@ -95,32 +76,9 @@ create table if not exists xinyuzhilian.assessment_template
 )
     comment '测评量表模板表';
 
-create table if not exists xinyuzhilian.consultation_feedback
-(
-    id             bigint auto_increment
-        primary key,
-    user_id        bigint                             not null comment '用户ID',
-    doctor_id      bigint                             null comment '医生ID',
-    hospital_id    bigint                             null comment '医院ID',
-    appointment_id bigint                             null comment '关联预约ID',
-    content        text                               not null comment '反馈内容',
-    rating         int      default 5                 null comment '评分(1-5)',
-    status         int      default 0                 null comment '状态: 0-已反馈, 1-已接收, 2-已拒收',
-    reply_content  text                               null comment '回复内容(已接收时)',
-    reject_reason  varchar(255)                       null comment '拒收理由',
-    create_time    datetime default CURRENT_TIMESTAMP null,
-    update_time    datetime default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP
-)
-    comment '咨询/挂号反馈表';
 
-create index idx_doctor_id
-    on xinyuzhilian.consultation_feedback (doctor_id);
 
-create index idx_hospital_id
-    on xinyuzhilian.consultation_feedback (hospital_id);
 
-create index idx_user_id
-    on xinyuzhilian.consultation_feedback (user_id);
 
 create table if not exists xinyuzhilian.course
 (
@@ -170,104 +128,11 @@ create table if not exists xinyuzhilian.cover_image
 create index idx_course_id
     on xinyuzhilian.cover_image (course_id);
 
-create table if not exists xinyuzhilian.department
-(
-    id          bigint auto_increment comment '主键ID'
-        primary key,
-    name        varchar(100)                       not null comment '科室名称',
-    hospital_id bigint                             not null comment '所属医院ID',
-    description varchar(500)                       null comment '科室介绍',
-    status      int      default 1                 null comment '状态(0-停用, 1-启用)',
-    create_time datetime default CURRENT_TIMESTAMP null,
-    update_time datetime default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP
-)
-    comment '医院科室表';
 
-create table if not exists xinyuzhilian.doctor_patient_relation
-(
-    id          bigint auto_increment
-        primary key,
-    doctor_id   bigint                                not null comment '医生用户ID',
-    patient_id  bigint                                not null comment '患者用户ID',
-    status      varchar(20) default 'NEW'             null comment '状态(NEW-新患者, ONGOING-进行中, STABLE-稳定, ARCHIVED-归档)',
-    create_time datetime    default CURRENT_TIMESTAMP null,
-    update_time datetime    default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP,
-    constraint uk_doc_pat
-        unique (doctor_id, patient_id)
-)
-    comment '医患关系表';
 
-create table if not exists xinyuzhilian.doctor_profile
-(
-    user_id            bigint                                   not null comment '用户ID'
-        primary key,
-    hospital_id        bigint                                   not null comment '所属医院ID',
-    department_id      bigint                                   null comment '所属科室ID',
-    real_name          varchar(50)                              not null comment '真实姓名',
-    title              varchar(50)                              null comment '职称',
-    specialty          varchar(255)                             null comment '擅长领域',
-    introduction       text                                     null comment '医生简介',
-    consultation_price decimal(10, 2) default 0.00              null comment '咨询价格',
-    schedule_config              json                                     null comment '排班配置JSON',
-    create_time                  datetime       default CURRENT_TIMESTAMP null,
-    is_offline_consult_enabled   tinyint        default 1                 null comment '是否开启线下咨询(0-否,1-是)',
-    is_online_consult_enabled    tinyint        default 1                 null,
-    rating_score                 decimal(3, 1)  default 5.0               null
-)
-    comment '医生档案表';
 
-create table if not exists xinyuzhilian.doctor_schedule
-(
-    id           bigint auto_increment comment '主键ID'
-        primary key,
-    doctor_id    bigint                             not null comment '医生ID',
-    work_date    date                               not null comment '工作日期',
-    work_shift   int                                not null comment '班次(1-上午, 2-下午, 3-晚班)',
-    max_patients int      default 20                null comment '最大接诊数',
-    booked_count int      default 0                 null comment '已预约数',
-    status       int      default 1                 null comment '状态(0-停诊, 1-正常)',
-    create_time  datetime default CURRENT_TIMESTAMP null,
-    constraint uk_doc_date_shift
-        unique (doctor_id, work_date, work_shift)
-)
-    comment '医生排班表';
 
-create table if not exists xinyuzhilian.doctor_schedule_config
-(
-    id           bigint auto_increment
-        primary key,
-    doctor_id    bigint                             not null comment '医生ID',
-    day_of_week  int                                not null comment '周几(1-7, 1=Monday)',
-    work_shift   int                                not null comment '班次(1-上午, 2-下午, 3-晚班)',
-    start_time   time                               null comment '开始时间',
-    end_time     time                               null comment '结束时间',
-    max_patients int      default 20                null comment '最大接诊数',
-    status       int      default 1                 null comment '状态(0-停用, 1-启用)',
-    create_time  datetime default CURRENT_TIMESTAMP null,
-    update_time  datetime default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP,
-    constraint uk_doc_day_shift
-        unique (doctor_id, day_of_week, work_shift)
-)
-    comment '医生周排班配置表';
 
-create table if not exists xinyuzhilian.hospital
-(
-    id            bigint auto_increment comment '主键ID'
-        primary key,
-    name          varchar(100)                       not null comment '医院名称',
-    code          varchar(50)                        not null comment '医院编码',
-    admin_user_id bigint                             null comment '管理员用户ID',
-    address       varchar(255)                       null comment '地址',
-    contact_phone varchar(20)                        null comment '联系电话',
-    introduction  text                               null comment '简介',
-    picture       varchar(255)                       null comment '医院封面图',
-    status        int      default 1                 null comment '状态(0-停用, 1-正常)',
-    create_time   datetime default CURRENT_TIMESTAMP null,
-    update_time   datetime default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP,
-    constraint uk_code
-        unique (code)
-)
-    comment '医院信息表';
 
 create table if not exists xinyuzhilian.inspirational_quote
 (
@@ -280,17 +145,6 @@ create table if not exists xinyuzhilian.inspirational_quote
 )
     comment '每日正能量语录';
 
-create table if not exists xinyuzhilian.patient_profile
-(
-    user_id           bigint                             not null comment '用户ID'
-        primary key,
-    emergency_contact varchar(50)                        null comment '紧急联系人',
-    emergency_phone   varchar(20)                        null comment '紧急电话',
-    medical_history   text                               null comment '既往病史',
-    tags              json                               null comment '标签(抑郁倾向等)',
-    create_time       datetime default CURRENT_TIMESTAMP null
-)
-    comment '患者档案表';
 
 create table if not exists xinyuzhilian.platform_feedback
 (
@@ -330,9 +184,6 @@ create table if not exists xinyuzhilian.user
     deleted            tinyint(1) default 0                 null comment '逻辑删除(0-未删除, 1-已删除)',
     create_time        datetime   default CURRENT_TIMESTAMP null comment '创建时间',
     update_time        datetime   default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '更新时间',
-    -- DEPRECATED: wx_id 已废弃（微信模块已移除），保留列以兼容旧数据
-    wx_id              varchar(64)                          null comment '微信OpenID',
-        wx_gzh_id          varchar(64)                          null comment '微信公众号OpenID',
     member_type        tinyint(1) default 0                 null comment '会员类型(0-非会员,1-VIP,2-SVIP)',
     member_expire_date datetime                             null comment '会员过期时间',
     constraint uk_username
@@ -340,9 +191,7 @@ create table if not exists xinyuzhilian.user
     constraint uk_email
         unique (email),
     constraint uk_phone
-        unique (phone),
-    constraint uk_wx_id
-        unique (wx_id)
+        unique (phone)
 )
     comment '用户信息表';
 
@@ -435,6 +284,9 @@ create table if not exists xinyuzhilian.article_comment
 )
     comment '文章评论表';
 
+create index idx_article_id
+    on xinyuzhilian.article_comment (article_id);
+
 create table if not exists xinyuzhilian.article_interaction
 (
     id          bigint auto_increment
@@ -503,21 +355,6 @@ create table if not exists xinyuzhilian.comment_like
 )
     comment '评论点赞表';
 
-create table if not exists xinyuzhilian.complaint
-(
-    id            bigint auto_increment
-        primary key,
-    user_id       bigint                             not null comment '用户 ID',
-    doctor_id     bigint                             not null comment '医生 ID',
-    appointment_id bigint                            not null comment '关联预约 ID',
-    content       text                               not null comment '投诉内容',
-    proof_images  json                               null comment '证明图片 (JSON 数组)',
-    status        tinyint  default 0                 null comment '状态 (0-待审核，1-审核通过/已处理，2-驳回)',
-    audit_remark  text                               null comment '审核备注',
-    create_time   datetime default CURRENT_TIMESTAMP null,
-    audit_time    datetime                           null
-)
-    comment '投诉表';
 
 create table if not exists xinyuzhilian.consultation_field
 (
@@ -535,18 +372,6 @@ create table if not exists xinyuzhilian.consultation_field
 )
     comment '咨询领域类型表';
 
-create table if not exists xinyuzhilian.consultation_message
-(
-    id             bigint auto_increment
-        primary key,
-    appointment_id bigint                             not null comment '预约ID',
-    sender_id      bigint                             not null comment '发送者ID',
-    receiver_id    bigint                             not null comment '接收者ID',
-    content        text                               null comment '消息内容',
-    type           int      default 0                 null comment '消息类型(0-文本, 1-图片, 2-测评, 3-处方/建议)',
-    create_time    datetime default CURRENT_TIMESTAMP null comment '创建时间'
-)
-    comment '在线咨询消息表';
 
 create table if not exists xinyuzhilian.course_category
 (
@@ -584,41 +409,10 @@ create index idx_search_count
 create index idx_status
     on xinyuzhilian.hot_search (status);
 
-create table if not exists xinyuzhilian.medical_record
-(
-    id                bigint auto_increment
-        primary key,
-    patient_contact_id bigint                        not null comment '就诊人ID',
-    appointment_id    bigint                             null comment '关联预约ID',
-    symptoms          text                               not null comment '病症',
-    visit_date        date                               not null comment '就诊日期',
-    department        varchar(100)                       not null comment '就诊科室',
-    hospital          varchar(255)                       null comment '就诊医院',
-    remarks           text                               null comment '备注',
-    create_time       datetime default CURRENT_TIMESTAMP null,
-    update_time       datetime default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP,
-    deleted           tinyint(1) default 0               null comment '逻辑删除'
-)
-    comment '就诊病历表';
 
-create index idx_appointment_id
-    on xinyuzhilian.medical_record (appointment_id);
 
-create index idx_patient_contact_id
-    on xinyuzhilian.medical_record (patient_contact_id);
 
-create table if not exists xinyuzhilian.medical_record_image
-(
-    id          bigint auto_increment
-        primary key,
-    record_id   bigint                             not null comment '病历ID',
-    image_url   varchar(500)                       not null comment '图片URL',
-    create_time datetime default CURRENT_TIMESTAMP null
-)
-    comment '病历图片表';
 
-create index idx_record_id
-    on xinyuzhilian.medical_record_image (record_id);
 
 create table if not exists xinyuzhilian.meme
 (
@@ -693,8 +487,8 @@ create table if not exists xinyuzhilian.psychologist
     training_experience  text                                     null comment '受训经历',
     certifications       text                                     null comment '专业认证(JSON数组)',
     years_experience     int            default 0                 null comment '咨询经验年限',
-    consultation_price   varchar(50)    default '0'               null comment '咨询价格(元/次)',
-    offline_price        varchar(50)    default '0'               null comment '线下咨询价格(元/次)',
+    consultation_price   decimal(10, 2)    default 0.00               null comment '咨询价格(元/次)',
+    offline_price        decimal(10, 2)    default 0.00               null comment '线下咨询价格(元/次)',
     rating_score         decimal(3, 2)  default 0.00              null comment '用户评分(0-5)',
     rating_count         int            default 0                 null comment '评分次数',
     consultation_count   int            default 0                 null comment '咨询接单量',
@@ -828,6 +622,7 @@ create table if not exists xinyuzhilian.psychologist_balance
     total_withdraw    decimal(12, 2) default 0.00              null comment '累计提现',
     balance           decimal(12, 2) default 0.00              null comment '可用余额',
     frozen_amount     decimal(12, 2) default 0.00              null comment '冻结金额',
+    version           int            default 0                 not null comment '乐观锁版本号',
     create_time       datetime       default CURRENT_TIMESTAMP null comment '创建时间',
     update_time       datetime       default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '更新时间',
     constraint uk_psychologist_id
@@ -861,7 +656,7 @@ create table if not exists xinyuzhilian.psychologist_income
     psychologist_id   bigint                             not null comment '心理咨询师ID',
     appointment_id    bigint                             not null comment '预约ID',
     order_fee         decimal(10, 2)                     not null comment '订单金额',
-    commission_rate   decimal(5, 2)                      not null comment '抽成比例',
+    commission_rate   decimal(5, 4)                      not null comment '抽成比例(0-1小数)',
     commission_amount decimal(10, 2)                     not null comment '抽成金额',
     income_amount     decimal(10, 2)                     not null comment '实际收入',
     rating_score      decimal(3, 2)                      null comment '用户评分',
@@ -911,8 +706,7 @@ create table if not exists xinyuzhilian.psychologist_profile_audit
     audit_remark      varchar(500)                       null comment '审核备注',
     auditor_id        bigint                             null comment '审核人ID',
     audit_time        datetime                           null comment '审核时间',
-    create_time       datetime default CURRENT_TIMESTAMP null comment '申请时间',
-    update_time       datetime                           null comment '审核时间'
+    create_time       datetime default CURRENT_TIMESTAMP null comment '申请时间'
 )
     comment '心理咨询师资料变更审核表';
 

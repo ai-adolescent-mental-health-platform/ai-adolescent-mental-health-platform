@@ -14,7 +14,7 @@
 | 手机端（规划中） | 待填充（拟 uniapp） | `apps/mobile` | 面向青少年及家长用户（规划中） |
 | 家长端（规划中） | 待填充 | `apps/parent-portal` | 面向家长用户（规划中） |
 
-数据层共享资源放在 `infra/sql/`（SQL 初始化脚本、演进补丁）。
+数据库脚本分两处：**建库脚本**在 `apps/backend/sql/`（`schema.sql` 全量表结构 + 补丁文件 + 字典种子数据），**增量与运维脚本**在 `infra/sql/`。
 
 ## 前置环境
 
@@ -34,7 +34,7 @@
 │   ├── web-client       # 当前 Web 用户端（Next.js）
 │   └── admin-portal     # 当前 Web 管理端（Next.js）
 ├── infra
-│   └── sql              # 共享数据库脚本（跨工作区）
+│   └── sql              # 数据库增量/运维脚本（建库脚本见 apps/backend/sql）
 ├── scripts              # Turbo/pnpm 调用 mvnw 的桥接脚本
 ├── package.json         # 根工作区脚本
 ├── pnpm-workspace.yaml  # 工作区通配：apps/*
@@ -118,7 +118,7 @@ Turbo 的 `build` 与 `test` 任务均依赖 `^build`（上游工作区先构建
 
 本地起服前请确保：
 
-1. MySQL 中已有数据库 `xinyuzhilian`，并执行过 `infra/sql/` 下的脚本；
+1. MySQL 中已有数据库 `xinyuzhilian`，并按 `apps/backend/sql/` 下的脚本完成初始化（见 [SETUP.md](SETUP.md) 第三节）；
 2. Redis 在 `localhost:6379` 可用；
 3. 如需 RabbitMQ 相关功能，本地 `guest:guest@localhost:5672` 可达。
 
@@ -136,7 +136,7 @@ Turbo 的 `build` 与 `test` 任务均依赖 `^build`（上游工作区先构建
   pnpm --filter <受影响的工作区> test
   ```
 
-- 涉及数据库 schema 变更需同步更新 `infra/sql/` 下脚本并在 PR 中说明。
+- 涉及数据库 schema 变更：改表结构同步更新 `apps/backend/sql/schema.sql`，一次性增量补丁放 `infra/sql/`，并在 PR 中说明。
 
 ## 进一步阅读
 

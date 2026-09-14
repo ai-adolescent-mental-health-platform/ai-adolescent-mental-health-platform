@@ -40,8 +40,8 @@ export function ConsultationChatPage() {
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const reconnectRef = useRef(0);
-  const maxReconnect = 3;
+  // ponytail: reconnectRef removed — sseSubscribe handles reconnect internally
+  // ponytail: maxReconnect removed — unused after reconnectRef cleanup
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => {
@@ -95,7 +95,7 @@ export function ConsultationChatPage() {
         } catch { /* ignore */ }
       },
       onError: () => {
-        if (reconnectRef.current < maxReconnect) reconnectRef.current += 1;
+        // sseSubscribe handles reconnect internally
       },
     });
 
