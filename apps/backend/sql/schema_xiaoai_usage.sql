@@ -1,19 +1,9 @@
--- 小爱倾听时长管理表
--- 用于管理用户的每日使用时长和会员类型
-
--- 用户使用时长记录表
-CREATE TABLE IF NOT EXISTS user_usage_time (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '主键ID',
-    user_id BIGINT NOT NULL COMMENT '用户ID',
-    used_seconds INT DEFAULT 0 COMMENT '今日已使用秒数',
-    last_reset_date DATE COMMENT '上次重置日期',
-    create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    UNIQUE KEY uk_user_id (user_id),
-    INDEX idx_last_reset_date (last_reset_date)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户使用时长记录表';
-
--- 用户会员信息表
+-- 用户会员信息表（小艾每日时长配额）
+--
+-- 说明：原同文件的 user_usage_time 建表已于 2026-09-14 移除。
+-- 该表属旧实现残留：UsageTimeService 是无实现类的空接口、
+-- UserUsageTimeMapper 无任何调用方；小艾时长功能实际由
+-- XiaoaiRecordServiceImpl 经 xiaoai_usage_stat 表实现。
 CREATE TABLE IF NOT EXISTS user_membership (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '主键ID',
     user_id BIGINT NOT NULL COMMENT '用户ID',
