@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -36,6 +36,13 @@ export function RegisterPage() {
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [codeCountdown, setCodeCountdown] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
 
   const pwdStrength = getPasswordStrength(password);
 
@@ -48,10 +55,11 @@ export function RegisterPage() {
       await api.user.sendEmailCode(email, "register");
       toast.success("验证码已发送");
       setCodeCountdown(60);
-      const timer = setInterval(() => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      timerRef.current = setInterval(() => {
         setCodeCountdown((prev) => {
           if (prev <= 1) {
-            clearInterval(timer);
+            if (timerRef.current) clearInterval(timerRef.current);
             return 0;
           }
           return prev - 1;
