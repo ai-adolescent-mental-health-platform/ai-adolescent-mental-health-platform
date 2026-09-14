@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Collections;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -195,7 +196,8 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         vo.setId(article.getId());
         vo.setTitle(article.getTitle());
         vo.setCoverUrl(article.getCoverUrl());
-        vo.setTagName(article.getTagId() != null ? articleTagMapper.selectById(article.getTagId()).getName() : null);
+        vo.setTagName(article.getTagId() != null ? 
+                Optional.ofNullable(articleTagMapper.selectById(article.getTagId())).map(ArticleTag::getName).orElse(null) : null);
         vo.setStatus(article.getStatus());
         vo.setCreateTime(article.getCreateTime());
         vo.setSource("user");

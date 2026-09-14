@@ -575,8 +575,8 @@ public class PsychologistAdminController {
         }
 
         List<Map<String, Object>> result = new ArrayList<>();
-        String onlinePriceStr = psychologist.getConsultationPrice();
-        String offlinePriceStr = psychologist.getOfflinePrice();
+        String onlinePriceStr = psychologist.getConsultationPrice() != null ? psychologist.getConsultationPrice().toPlainString() : "0";
+        String offlinePriceStr = psychologist.getOfflinePrice() != null ? psychologist.getOfflinePrice().toPlainString() : "0";
 
         // 查询数据库中的服务记录
         LambdaQueryWrapper<PsychologistService> serviceWrapper = new LambdaQueryWrapper<>();
@@ -721,7 +721,7 @@ public class PsychologistAdminController {
             if (psychologist == null) {
                 return Result.error("心理咨询师不存在");
             }
-            String oldPrice = psychologist.getConsultationPrice();
+            String oldPrice = psychologist.getConsultationPrice() != null ? psychologist.getConsultationPrice().toPlainString() : "0";
 
             // 提交价格变更审核
             Map<String, Object> auditResult = profileAuditService.submitProfileChange(
@@ -781,7 +781,7 @@ public class PsychologistAdminController {
             if (psychologist == null) {
                 return Result.error("心理咨询师不存在");
             }
-            String oldPrice = psychologist.getOfflinePrice() != null ? psychologist.getOfflinePrice() : "0";
+            String oldPrice = psychologist.getOfflinePrice() != null ? psychologist.getOfflinePrice().toPlainString() : "0";
 
             // 提交价格变更审核
             Map<String, Object> auditResult = profileAuditService.submitProfileChange(

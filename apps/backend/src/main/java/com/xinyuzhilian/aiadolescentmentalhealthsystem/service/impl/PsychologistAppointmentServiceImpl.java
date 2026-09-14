@@ -87,17 +87,15 @@ public class PsychologistAppointmentServiceImpl extends ServiceImpl<Psychologist
         // 根据服务类型获取价格（统一从咨询师表consultationPrice/offlinePrice获取）
         BigDecimal fee;
         if ("OFFLINE".equalsIgnoreCase(serviceType)) {
-            String offlinePriceStr = psychologist.getOfflinePrice();
-            if (offlinePriceStr == null || offlinePriceStr.trim().isEmpty()) {
+            fee = psychologist.getOfflinePrice();
+            if (fee == null || fee.compareTo(BigDecimal.ZERO) <= 0) {
                 throw new RuntimeException("线下咨询价格未设置");
             }
-            fee = new BigDecimal(offlinePriceStr);
         } else {
-            String consultationPriceStr = psychologist.getConsultationPrice();
-            if (consultationPriceStr == null || consultationPriceStr.trim().isEmpty()) {
+            fee = psychologist.getConsultationPrice();
+            if (fee == null || fee.compareTo(BigDecimal.ZERO) <= 0) {
                 throw new RuntimeException("线上咨询价格未设置");
             }
-            fee = new BigDecimal(consultationPriceStr);
         }
 
         // 构建用户基本情况JSON
@@ -141,9 +139,11 @@ public class PsychologistAppointmentServiceImpl extends ServiceImpl<Psychologist
 
         appointmentMapper.insert(appointment);
 
-        // 更新排班预约人数
-        schedule.setBookedCount(schedule.getBookedCount() + 1);
-        scheduleMapper.updateById(schedule);
+        // 更新排班预约人数（原子操作，防超卖）
+        int affected = scheduleMapper.incrementBookedCount(scheduleId);
+        if (affected == 0) {
+            throw new RuntimeException("该时段已约满");
+        }
 
         return appointment.getId();
     }
@@ -204,13 +204,9 @@ public class PsychologistAppointmentServiceImpl extends ServiceImpl<Psychologist
         appointment.setUpdateTime(LocalDateTime.now());
         appointmentMapper.updateById(appointment);
 
-        // 恢复排班预约人数
+        // 恢复排班预约人数（原子操作，防负数）
         if (appointment.getScheduleId() != null) {
-            PsychologistSchedule schedule = scheduleMapper.selectById(appointment.getScheduleId());
-            if (schedule != null && schedule.getBookedCount() > 0) {
-                schedule.setBookedCount(schedule.getBookedCount() - 1);
-                scheduleMapper.updateById(schedule);
-            }
+            scheduleMapper.decrementBookedCount(appointment.getScheduleId());
         }
 
         return "取消成功";
@@ -310,13 +306,9 @@ public class PsychologistAppointmentServiceImpl extends ServiceImpl<Psychologist
                 appointment.setPayStatus(PsychologistAppointment.PAY_STATUS_REFUNDED);
             }
 
-            // 恢复排班预约人数
+            // 恢复排班预约人数（原子操作，防负数）
             if (appointment.getScheduleId() != null) {
-                PsychologistSchedule schedule = scheduleMapper.selectById(appointment.getScheduleId());
-                if (schedule != null && schedule.getBookedCount() > 0) {
-                    schedule.setBookedCount(schedule.getBookedCount() - 1);
-                    scheduleMapper.updateById(schedule);
-                }
+                scheduleMapper.decrementBookedCount(appointment.getScheduleId());
             }
         }
 
@@ -342,21 +334,19 @@ public class PsychologistAppointmentServiceImpl extends ServiceImpl<Psychologist
             return "只有已确认或待进行的预约才能发送视频链接/线下地址";
         }
 
-        // 保存视频链接
-        if (StringUtils.hasText(videoLink)) {
-            appointment.setVideoLink(videoLink);
-        }
-        // 保存线下地址（如果传入了）
-        if (StringUtils.hasText(offlineAddress)) {
+        // 保存视频链接或线下地址
+        if ("OFFLINE".equalsIgnoreCase(appointment.getServiceType()) && StringUtils.hasText(offlineAddress)) {
             appointment.setVideoLink(offlineAddress);
+        } else if (StringUtils.hasText(videoLink)) {
+            appointment.setVideoLink(videoLink);
         }
         // 保存开始时间
         if (StringUtils.hasText(startTime)) {
-            appointment.setStartTime(LocalDateTime.parse(startTime));
+            appointment.setStartTime(LocalDateTime.parse(startTime, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
         }
         // 保存结束时间
         if (StringUtils.hasText(endTime)) {
-            appointment.setEndTime(LocalDateTime.parse(endTime));
+            appointment.setEndTime(LocalDateTime.parse(endTime, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
         }
         // 状态流转到"待进行"
         appointment.setStatus(PsychologistAppointment.STATUS_TO_START);
@@ -382,7 +372,7 @@ public class PsychologistAppointmentServiceImpl extends ServiceImpl<Psychologist
 
         // 如果有开始时间，则保存
         if (StringUtils.hasText(startTime)) {
-            appointment.setStartTime(LocalDateTime.parse(startTime));
+            appointment.setStartTime(LocalDateTime.parse(startTime, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
         }
         // 状态变为"进行中"
         appointment.setStatus(PsychologistAppointment.STATUS_IN_PROGRESS);
@@ -489,9 +479,9 @@ public class PsychologistAppointmentServiceImpl extends ServiceImpl<Psychologist
     @Override
     public String generateOrderNo() {
         String prefix = "PSY";
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
-        String random = String.format("%04d", new Random().nextInt(10000));
-        return prefix + timestamp + random;
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
+        String uuid = UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
+        return prefix + timestamp + uuid;
     }
 
     // ==================== 私有方法 ====================

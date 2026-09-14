@@ -163,24 +163,24 @@ public class PsychologistServiceImpl extends ServiceImpl<PsychologistMapper, Psy
 
             // 获取服务列表（动态生成，价格统一从consultationPrice/offlinePrice获取）
             List<Map<String, Object>> services = new ArrayList<>();
-            if (p.getConsultationPrice() != null && !p.getConsultationPrice().isEmpty()) {
+            if (p.getConsultationPrice() != null && p.getConsultationPrice().compareTo(java.math.BigDecimal.ZERO) > 0) {
                 try {
                     Map<String, Object> videoService = new HashMap<>();
                     videoService.put("serviceType", "VIDEO");
-                    videoService.put("price", new BigDecimal(p.getConsultationPrice()));
+                    videoService.put("price", p.getConsultationPrice());
                     services.add(videoService);
 
                     Map<String, Object> voiceService = new HashMap<>();
                     voiceService.put("serviceType", "VOICE");
-                    voiceService.put("price", new BigDecimal(p.getConsultationPrice()));
+                    voiceService.put("price", p.getConsultationPrice());
                     services.add(voiceService);
                 } catch (NumberFormatException ignored) {}
             }
-            if (p.getOfflinePrice() != null && !p.getOfflinePrice().isEmpty()) {
+            if (p.getOfflinePrice() != null && p.getOfflinePrice().compareTo(java.math.BigDecimal.ZERO) > 0) {
                 try {
                     Map<String, Object> offlineService = new HashMap<>();
                     offlineService.put("serviceType", "OFFLINE");
-                    offlineService.put("price", new BigDecimal(p.getOfflinePrice()));
+                    offlineService.put("price", p.getOfflinePrice());
                     services.add(offlineService);
                 } catch (NumberFormatException ignored) {}
             }
@@ -192,8 +192,8 @@ public class PsychologistServiceImpl extends ServiceImpl<PsychologistMapper, Psy
             item.put("services", services);
 
             // 基础价格（统一从咨询师表consultationPrice获取）
-            if (p.getConsultationPrice() != null && !p.getConsultationPrice().isEmpty()) {
-                item.put("basePrice", new BigDecimal(p.getConsultationPrice()));
+            if (p.getConsultationPrice() != null && p.getConsultationPrice().compareTo(java.math.BigDecimal.ZERO) > 0) {
+                item.put("basePrice", p.getConsultationPrice());
             } else {
                 item.put("basePrice", BigDecimal.ZERO);
             }
@@ -286,8 +286,8 @@ public class PsychologistServiceImpl extends ServiceImpl<PsychologistMapper, Psy
             item.put("qualifications", new ArrayList<>());
             item.put("services", new ArrayList<>());
             // 基础价格（统一从consultationPrice获取）
-            if (p.getConsultationPrice() != null && !p.getConsultationPrice().isEmpty()) {
-                item.put("basePrice", new BigDecimal(p.getConsultationPrice()));
+            if (p.getConsultationPrice() != null && p.getConsultationPrice().compareTo(java.math.BigDecimal.ZERO) > 0) {
+                item.put("basePrice", p.getConsultationPrice());
             } else {
                 item.put("basePrice", BigDecimal.ZERO);
             }
@@ -381,26 +381,26 @@ public class PsychologistServiceImpl extends ServiceImpl<PsychologistMapper, Psy
         }
         // 如果没有查到服务记录，使用默认值（从consultationPrice/offlinePrice获取）
         if (services.isEmpty()) {
-        if (p.getConsultationPrice() != null && !p.getConsultationPrice().isEmpty()) {
+        if (p.getConsultationPrice() != null && p.getConsultationPrice().compareTo(java.math.BigDecimal.ZERO) > 0) {
             try {
                 Map<String, Object> videoService = new HashMap<>();
                 videoService.put("serviceType", "VIDEO");
-                videoService.put("price", new BigDecimal(p.getConsultationPrice()));
+                videoService.put("price", p.getConsultationPrice());
                     videoService.put("status", 1);
                 services.add(videoService);
 
                     Map<String, Object> voiceService = new HashMap<>();
                     voiceService.put("serviceType", "VOICE");
-                    voiceService.put("price", new BigDecimal(p.getConsultationPrice()));
+                    voiceService.put("price", p.getConsultationPrice());
                     voiceService.put("status", 1);
                     services.add(voiceService);
                 } catch (NumberFormatException ignored) {}
             }
-            if (p.getOfflinePrice() != null && !p.getOfflinePrice().isEmpty()) {
+            if (p.getOfflinePrice() != null && p.getOfflinePrice().compareTo(java.math.BigDecimal.ZERO) > 0) {
                 try {
                     Map<String, Object> offlineService = new HashMap<>();
                     offlineService.put("serviceType", "OFFLINE");
-                    offlineService.put("price", new BigDecimal(p.getOfflinePrice()));
+                    offlineService.put("price", p.getOfflinePrice());
                     offlineService.put("status", 1);
                     services.add(offlineService);
                 } catch (NumberFormatException ignored) {}
@@ -536,9 +536,9 @@ public class PsychologistServiceImpl extends ServiceImpl<PsychologistMapper, Psy
                 item.put("psychologistName", p.getRealName());
                 item.put("psychologistHead", p.getHeadPath());
                 item.put("ratingScore", p.getRatingScore());
-                if (p.getConsultationPrice() != null && !p.getConsultationPrice().isEmpty()) {
+                if (p.getConsultationPrice() != null && p.getConsultationPrice().compareTo(java.math.BigDecimal.ZERO) > 0) {
                     try {
-                        item.put("basePrice", new BigDecimal(p.getConsultationPrice()));
+                        item.put("basePrice", p.getConsultationPrice());
                     } catch (NumberFormatException e) {
                         item.put("basePrice", BigDecimal.ZERO);
                     }

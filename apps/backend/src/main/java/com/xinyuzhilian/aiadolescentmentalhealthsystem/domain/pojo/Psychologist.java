@@ -66,11 +66,11 @@ public class Psychologist implements Serializable {
 
     @ApiModelProperty(value = "咨询价格（元/次）")
     @TableField("consultation_price")
-    private String consultationPrice;
+    private BigDecimal consultationPrice;
 
     @ApiModelProperty(value = "线下咨询价格（元/次）")
     @TableField("offline_price")
-    private String offlinePrice;
+    private BigDecimal offlinePrice;
 
     @ApiModelProperty(value = "用户评分（0-5）")
     @TableField("rating_score")

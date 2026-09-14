@@ -14,6 +14,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
 import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
  * <p>
@@ -44,6 +45,7 @@ public class User implements Serializable {
 
     @ApiModelProperty(value = "密码（不为空，不含SQL注入特殊字符，加密存储）")
     @TableField("password")
+    @JsonIgnore
     private String password;
 
     @ApiModelProperty(value = "角色（0-游客，1-普通用户，2-医生，3-医生管理员，4-超级管理员，默认1）")

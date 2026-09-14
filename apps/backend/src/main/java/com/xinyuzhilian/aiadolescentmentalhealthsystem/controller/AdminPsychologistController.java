@@ -136,7 +136,7 @@ public class AdminPsychologistController {
             if (request.containsKey("consultationPrice") && request.get("consultationPrice") != null) {
                 Object priceObj = request.get("consultationPrice");
                 if (priceObj instanceof Number) {
-                    psychologist.setConsultationPrice(String.valueOf(((Number) priceObj).doubleValue()));
+                    psychologist.setConsultationPrice(java.math.BigDecimal.valueOf(((Number) priceObj).doubleValue()));
                 }
             }
 
@@ -144,7 +144,7 @@ public class AdminPsychologistController {
             if (request.containsKey("offlinePrice") && request.get("offlinePrice") != null) {
                 Object priceObj = request.get("offlinePrice");
                 if (priceObj instanceof Number) {
-                    psychologist.setOfflinePrice(String.valueOf(((Number) priceObj).doubleValue()));
+                    psychologist.setOfflinePrice(java.math.BigDecimal.valueOf(((Number) priceObj).doubleValue()));
                 }
             }
 
@@ -233,14 +233,14 @@ public class AdminPsychologistController {
             if (request.containsKey("consultationPrice") && request.get("consultationPrice") != null) {
                 Object priceObj = request.get("consultationPrice");
                 if (priceObj instanceof Number) {
-                    psychologist.setConsultationPrice(String.valueOf(((Number) priceObj).doubleValue()));
+                    psychologist.setConsultationPrice(java.math.BigDecimal.valueOf(((Number) priceObj).doubleValue()));
                 }
             }
 
             if (request.containsKey("offlinePrice") && request.get("offlinePrice") != null) {
                 Object priceObj = request.get("offlinePrice");
                 if (priceObj instanceof Number) {
-                    psychologist.setOfflinePrice(String.valueOf(((Number) priceObj).doubleValue()));
+                    psychologist.setOfflinePrice(java.math.BigDecimal.valueOf(((Number) priceObj).doubleValue()));
                 }
             }
 

@@ -319,11 +319,11 @@ public class PsychologistProfileAuditServiceImpl extends ServiceImpl<Psychologis
                 break;
             case "consultationPrice":
             case "price":
-                psychologist.setConsultationPrice(newValue);
+                psychologist.setConsultationPrice(new java.math.BigDecimal(newValue));
                 break;
             case "offlinePrice":
             case "offline_price":
-                psychologist.setOfflinePrice(newValue);
+                psychologist.setOfflinePrice(new java.math.BigDecimal(newValue));
                 break;
             default:
                 log.warn("未知的字段类型: {}", fieldName);
