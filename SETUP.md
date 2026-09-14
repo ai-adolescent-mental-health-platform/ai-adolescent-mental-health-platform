@@ -24,12 +24,17 @@ pnpm install
 
 ## 三、数据库初始化
 
-创建库并导入完整数据（含表结构+测试数据）：
+创建库，然后按顺序导入表结构与字典数据（与 CI 的 `Initialize backend database` 步骤一致）：
 
 ```bash
 mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS xinyuzhilian DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;"
-mysql -u root -p xinyuzhilian < infra/sql/xinyuzhilian_full_dump.sql
+mysql -u root -p xinyuzhilian < apps/backend/sql/schema.sql
+mysql -u root -p xinyuzhilian < apps/backend/sql/schema_email_bind.sql
+mysql -u root -p xinyuzhilian < apps/backend/sql/schema_xiaoai_usage.sql
+mysql -u root -p xinyuzhilian < apps/backend/sql/seed_dict_data.sql
 ```
+
+导入的是表结构与字典数据，不含业务数据。已有库需要补齐结构时，执行 `infra/sql/` 下的增量脚本。
 
 ## 四、后端配置
 
