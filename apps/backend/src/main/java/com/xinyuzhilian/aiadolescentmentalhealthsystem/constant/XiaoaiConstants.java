@@ -53,6 +53,13 @@ public class XiaoaiConstants {
     /** 会员过期结束 */
     public static final String END_REASON_EXPIRED = "expired";
 
+    /**
+     * end_reason 列宽上限。
+     * 必须与 apps/backend/sql/schema.sql 中 ai_xiaoai_session.end_reason 的 varchar(32) 保持一致；
+     * 超出会触发 MysqlDataTruncation，导致整条会话结束更新失败。
+     */
+    public static final int END_REASON_MAX_LENGTH = 32;
+
     // ==================== WebSocket 配置 ====================
 
     /** 阿里云 WebSocket URL 模板 */
