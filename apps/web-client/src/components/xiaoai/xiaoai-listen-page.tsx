@@ -46,6 +46,29 @@ function generateId() {
   return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+/**
+ * 解析 WebSocket 基地址。
+ *
+ * HTTPS 页面禁止发起 ws:// 连接（浏览器按 mixed content 直接拦截，CSP 无法放行），
+ * 因此安全页面下必须用 wss://，且要经 443 由边缘 nginx 升级转发到后端——
+ * 后端 8080 是明文端口，wss://host:8080 同样连不上。
+ *
+ * 注：NEXT_PUBLIC_* 是构建期内联值，配置错了只能重新构建镜像才能修正，
+ * 所以这里对 https 页面忽略非 wss 的配置，按同源推导，避免构建期误配直接打死线上。
+ */
+function resolveWsBase(): string {
+  const configured = process.env.NEXT_PUBLIC_WS_BASE_URL;
+
+  if (typeof window === "undefined") return configured || "ws://127.0.0.1:8080";
+
+  if (window.location.protocol === "https:") {
+    return configured?.startsWith("wss://") ? configured : `wss://${window.location.host}`;
+  }
+
+  // 本地开发：页面在 3300，后端 WS 在 8080，不能按同源推导
+  return configured || "ws://127.0.0.1:8080";
+}
+
 function formatTime(date: Date) {
   return date.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
 }
@@ -375,7 +398,7 @@ export function XiaoaiListenPage() {
     isTimeExpiredRef.current = false;
     setIsTimeExpired(false);
 
-    const wsBase = process.env.NEXT_PUBLIC_WS_BASE_URL || "ws://127.0.0.1:8080";
+    const wsBase = resolveWsBase();
     const wsUrl = `${wsBase}${WS_PATH}`;
     const user = getStoredUser<UserProfile>();
 
