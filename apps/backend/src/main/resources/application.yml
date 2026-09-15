@@ -54,6 +54,9 @@ jwt:
 dashscope:
   api:
     key: ${DASHSCOPE_API_KEY}
+    # 千问AI平台业务空间 ID。带业务空间归属的 API Key 必须携带它，否则鉴权/模型路由会失败。
+    # 非机密标识符（不能单独用于鉴权），仍可用 DASHSCOPE_WORKSPACE_ID 覆盖以切换业务空间。
+    workspace: ${DASHSCOPE_WORKSPACE_ID:llm-0ixuo0u1xxcrv4gx}
 
 send:
   mail:

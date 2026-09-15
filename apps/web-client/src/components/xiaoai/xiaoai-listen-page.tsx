@@ -5,34 +5,11 @@ import { api } from "@/lib/api";
 import { getStoredUser } from "@/lib/session";
 import type { UserProfile } from "@/lib/types";
 
-// ========== Voice list ==========
-const VOICE_LIST = [
-  { voice: "Tina", name: "甜甜 Tina", desc: "温暖治愈系小姐姐", gender: "female" },
-  { voice: "Liora Mira", name: "清欢 Liora", desc: "烟火人间的温柔", gender: "female" },
-  { voice: "Sunnybobi", name: "知芝 Sunny", desc: "社恐邻家姑娘", gender: "female" },
-  { voice: "Raymond", name: "林川 Raymond", desc: "爱吃外卖的宅男", gender: "male" },
-  { voice: "Ethan", name: "晨煦 Ethan", desc: "阳光温暖活力少年", gender: "male" },
-  { voice: "Theo Calm", name: "予安 Theo", desc: "静默处传递理解", gender: "male" },
-  { voice: "Serena", name: "苏瑶 Serena", desc: "温柔小姐姐", gender: "female" },
-  { voice: "Harvey", name: "厚 Harvey", desc: "岁月沉淀的大叔", gender: "male" },
-  { voice: "Maia", name: "四月 Maia", desc: "知性与温柔碰撞", gender: "female" },
-  { voice: "Evan", name: "江晨 Evan", desc: "年下奶狗男孩", gender: "male" },
-  { voice: "Momo", name: "茉兔 Momo", desc: "撒娇搞怪小可爱", gender: "female" },
-  { voice: "Angel", name: "安琪 Angel", desc: "台式甜美女孩", gender: "female" },
-  { voice: "Mia", name: "舒然 Mia", desc: "温柔生活博主", gender: "female" },
-  { voice: "Joyner", name: "阿逗 Joyner", desc: "搞笑接地气", gender: "male" },
-  { voice: "Katerina", name: "卡捷琳娜", desc: "御姐韵律音色", gender: "female" },
-  { voice: "Ryan", name: "甜茶 Ryan", desc: "戏感炸裂男孩", gender: "male" },
-  { voice: "Jennifer", name: "詹妮弗", desc: "电影质感美语女声", gender: "female" },
-  { voice: "Aiden", name: "艾登 Aiden", desc: "精通厨艺大男孩", gender: "male" },
-  { voice: "Mione", name: "敏儿 Mione", desc: "成熟知性妹妹", gender: "female" },
-  { voice: "Sohee", name: "素熙 Sohee", desc: "韩国开朗欧尼", gender: "female" },
-  { voice: "Lenn", name: "莱恩 Lenn", desc: "理性叛逆德国青年", gender: "male" },
-  { voice: "Andre", name: "安德雷 Andre", desc: "磁性沉稳男生", gender: "male" },
-  { voice: "Roya", name: "萝雅 Roya", desc: "热爱运动女孩", gender: "female" },
-  { voice: "Arda", name: "阿尔达 Arda", desc: "干净温润男生", gender: "male" },
-  { voice: "Marina", name: "玛丽娜 Marina", desc: "多元文化女孩", gender: "female" },
-];
+// ========== Voice ==========
+// qwen-audio-3.0-realtime-plus 只支持 5 个系统音色（longanqian 为默认），
+// 且 session.voice 仅在首次 session.update 时生效，后续传入会被忽略，
+// 因此暂不提供音色切换，统一使用默认音色。
+const VOICE = "longanqian";
 
 // ========== Constants ==========
 const WS_PATH = "/ws/omni-realtime";
@@ -87,43 +64,6 @@ function arrayBufferToBase64(buffer: ArrayBuffer) {
   return btoa(binary);
 }
 
-function writeString(view: DataView, offset: number, str: string) {
-  for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
-}
-
-function pcmToWavBase64(pcmData: Int16Array, sampleRate = 16000) {
-  const numChannels = 1;
-  const bitsPerSample = 16;
-  const dataSize = pcmData.byteLength;
-  const headerSize = 44;
-  const totalSize = headerSize + dataSize;
-
-  const buffer = new ArrayBuffer(totalSize);
-  const view = new DataView(buffer);
-  const uint8 = new Uint8Array(buffer);
-
-  writeString(view, 0, "RIFF");
-  view.setUint32(4, totalSize - 8, true);
-  writeString(view, 8, "WAVE");
-  writeString(view, 12, "fmt ");
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, numChannels, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * numChannels * (bitsPerSample / 8), true);
-  view.setUint16(32, numChannels * (bitsPerSample / 8), true);
-  view.setUint16(34, bitsPerSample, true);
-  writeString(view, 36, "data");
-  view.setUint32(40, dataSize, true);
-
-  const pcmBytes = new Uint8Array(pcmData.buffer, pcmData.byteOffset, pcmData.byteLength);
-  uint8.set(pcmBytes, headerSize);
-
-  let binary = "";
-  for (let i = 0; i < uint8.length; i++) binary += String.fromCharCode(uint8[i]);
-  return btoa(binary);
-}
-
 export function XiaoaiListenPage() {
   // Connection & recording state
   const [isConnected, setIsConnected] = useState(false);
@@ -131,10 +71,6 @@ export function XiaoaiListenPage() {
   const [isMuted, setIsMuted] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-
-  // Voice
-  const [voiceIndex, setVoiceIndex] = useState(0);
-  const [showVoiceSelector, setShowVoiceSelector] = useState(false);
 
   // Time tracking
   const [memberType, setMemberType] = useState(0);
@@ -158,7 +94,6 @@ export function XiaoaiListenPage() {
   const usageTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const videoStreamRef = useRef<MediaStream | null>(null);
-  const wavHeaderSentRef = useRef(false);
   const reconnectCountRef = useRef(0);
   const isTimeExpiredRef = useRef(false);
   const remainingSecondsRef = useRef(0);
@@ -170,8 +105,6 @@ export function XiaoaiListenPage() {
 
   // Video drag
   const dragRef = useRef<{ dragging: boolean; ox: number; oy: number }>({ dragging: false, ox: 0, oy: 0 });
-
-  const currentVoice = VOICE_LIST[voiceIndex];
 
   // Keep refs in sync
   useEffect(() => { remainingSecondsRef.current = remainingSeconds; }, [remainingSeconds]);
@@ -192,8 +125,14 @@ export function XiaoaiListenPage() {
     if (audioContextRef.current) return audioContextRef.current;
     const Ctor = window.AudioContext || (window as unknown as Record<string, unknown>).webkitAudioContext as typeof AudioContext;
     if (!Ctor) { addSystemMessage("当前浏览器不支持音频播放"); return null; }
-    audioContextRef.current = new Ctor({ sampleRate: AUDIO_SAMPLE_RATE });
-    return audioContextRef.current;
+    const ctx = new Ctor({ sampleRate: AUDIO_SAMPLE_RATE });
+    // 浏览器可以忽略 sampleRate 请求。若实际采样率不是 16kHz，采集出的 PCM 就与服务端
+    // 假定的输入格式（16kHz）不符，语音会变速、识别失败。这里必须显式告警，不能静默继续。
+    if (ctx.sampleRate !== AUDIO_SAMPLE_RATE) {
+      addSystemMessage(`⚠️ 音频采样率为 ${ctx.sampleRate}Hz（期望 ${AUDIO_SAMPLE_RATE}Hz），语音识别可能不准确`);
+    }
+    audioContextRef.current = ctx;
+    return ctx;
   }, [addSystemMessage]);
 
   // Audio playback
@@ -321,7 +260,6 @@ export function XiaoaiListenPage() {
       mediaStreamRef.current.getTracks().forEach((t) => t.stop());
       mediaStreamRef.current = null;
     }
-    wavHeaderSentRef.current = false;
   }, []);
 
   // Handle WebSocket events
@@ -351,9 +289,43 @@ export function XiaoaiListenPage() {
       case "response.audio.delta":
         playAudio(data.delta as string);
         break;
-      case "response.done":
-        addSystemMessage("✅ 响应完成");
+      case "response.text.delta": {
+        // 纯文本模式（modalities 仅含 text）下的输出事件；音频模式下不会出现。
+        // 缺这两个 case 会在纯文本模式下表现为「界面毫无反应」。
+        const delta = (data.delta as string) || "";
+        if (delta) {
+          setChatMessages((prev) => {
+            const last = prev[prev.length - 1];
+            if (last?.role === "AI") {
+              return [...prev.slice(0, -1), { ...last, content: last.content + delta }];
+            }
+            return [...prev, { id: generateId(), role: "AI", content: delta, timestamp: new Date() }];
+          });
+        }
         break;
+      }
+      case "response.text.done": {
+        const text = (data.text as string) || "";
+        if (text) {
+          setChatMessages((prev) => {
+            const last = prev[prev.length - 1];
+            if (last?.role === "AI") {
+              return [...prev.slice(0, -1), { ...last, content: text }];
+            }
+            return [...prev, { id: generateId(), role: "AI", content: text, timestamp: new Date() }];
+          });
+        }
+        break;
+      }
+      case "response.done": {
+        // response.status 取值：completed / cancelled（被 VAD 打断）/ failed
+        const status = (data.response as Record<string, unknown> | undefined)?.status as string | undefined;
+        if (status === "cancelled") addSystemMessage("已打断上一轮回复");
+        else if (status === "failed") addSystemMessage("回复生成失败");
+        else if (status === "completed") addSystemMessage("✅ 响应完成");
+        else addSystemMessage(`响应结束${status ? `（${status}）` : ""}`);
+        break;
+      }
       case "session.created":
       case "session.updated":
         break;
@@ -438,11 +410,13 @@ export function XiaoaiListenPage() {
           event_id: `sess${Date.now()}`,
           type: "session.update",
           session: {
-            modalities: ["text", "audio"],
-            voice: currentVoice.voice,
+            modalities: ["audio", "text"],
+            voice: VOICE,
             input_audio_format: "pcm",
             output_audio_format: "pcm",
-            input_audio_transcription: { model: "gummy-realtime-v1" },
+            // 不传 input_audio_transcription：服务端默认即自动转录
+            // （session.created 中为 qwen3-asr-flash-realtime），显式传入未支持的
+            // 字段会触发服务端参数校验错误。
             instructions: "你的名字是【小爱倾听师】，你隶属于【智能青少年健康心理系统】，你的服务对象是青少年。你是一名专业的青少年心理倾听陪伴者，不是心理医生，不做任何心理疾病诊断、不开药方、不提供医疗治疗，只做情绪倾听、接纳与疏导，帮助青少年缓解不开心、孤独、委屈、低落、抑郁等负面情绪，让他们感受到被理解、被陪伴，重拾轻松愉悦的心情。",
             turn_detection: { type: "server_vad" },
           },
@@ -482,7 +456,7 @@ export function XiaoaiListenPage() {
       setIsConnecting(false);
       addSystemMessage(`创建连接失败: ${(err as Error).message}`);
     }
-  }, [isConnecting, addSystemMessage, stopTimers, reportUsage, handleTimeExpired, handleWsEvent, currentVoice.voice]);
+  }, [isConnecting, addSystemMessage, stopTimers, reportUsage, handleTimeExpired, handleWsEvent]);
 
   // Start recording
   const startRecordInternal = useCallback(async (ws: WebSocket) => {
@@ -503,7 +477,9 @@ export function XiaoaiListenPage() {
       const source = ctx.createMediaStreamSource(stream);
       mediaStreamSourceRef.current = source;
 
-      const processor = ctx.createScriptProcessor(4096, 1, 1);
+      // 文档要求每 20~40ms 发送一帧音频；16kHz 下 512 采样 = 32ms。
+      // 原为 4096（=256ms），过粗会明显拖慢服务端 VAD 的语音起止判定。
+      const processor = ctx.createScriptProcessor(512, 1, 1);
       scriptProcessorRef.current = processor;
 
       processor.onaudioprocess = (e) => {
@@ -516,22 +492,14 @@ export function XiaoaiListenPage() {
         }
         if (ws.readyState !== WebSocket.OPEN) return;
 
-        if (!wavHeaderSentRef.current) {
-          const wavB64 = pcmToWavBase64(int16, AUDIO_SAMPLE_RATE);
-          ws.send(JSON.stringify({
-            event_id: `evt_${Date.now()}_audio`,
-            type: "input_audio_buffer.append",
-            audio: wavB64,
-          }));
-          wavHeaderSentRef.current = true;
-        } else {
-          const b64 = arrayBufferToBase64(int16.buffer);
-          ws.send(JSON.stringify({
-            event_id: `evt_${Date.now()}_audio`,
-            type: "input_audio_buffer.append",
-            audio: b64,
-          }));
-        }
+        // 只接受裸 PCM（16kHz/16bit/单声道）：不能夹 WAV/RIFF 头，
+        // 否则服务端会把那 44 字节头当作音频样本解码。
+        const b64 = arrayBufferToBase64(int16.buffer);
+        ws.send(JSON.stringify({
+          event_id: `evt_${Date.now()}_audio`,
+          type: "input_audio_buffer.append",
+          audio: b64,
+        }));
       };
 
       source.connect(processor);
@@ -684,16 +652,6 @@ export function XiaoaiListenPage() {
           <span>小爱倾听 心理陪伴</span>
         </div>
 
-        {/* Voice selector button */}
-        <button
-          onClick={() => setShowVoiceSelector(true)}
-          className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-muted hover:bg-purple/10 transition-colors"
-        >
-          <span>{currentVoice.gender === "female" ? "👩" : "👨"}</span>
-          <span>{currentVoice.name}</span>
-          <span className="text-xs opacity-50">▼</span>
-        </button>
-
         <div className="flex items-center gap-3">
           {dailyLimit > 0 && (
             <div className="text-sm">
@@ -788,34 +746,6 @@ export function XiaoaiListenPage() {
           </>
         )}
       </footer>
-
-      {/* Voice selector modal */}
-      {showVoiceSelector && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(58,46,92,0.5)] backdrop-blur-[2px]" onClick={() => setShowVoiceSelector(false)}>
-          <div className="cushion-card rounded-card bg-surface/95 max-h-[70vh] w-[420px] max-w-[90vw] overflow-y-auto p-4" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-ink font-bold">选择 AI 音色</h3>
-              <button onClick={() => setShowVoiceSelector(false)} className="text-muted hover:text-ink text-lg">✕</button>
-            </div>
-            <div className="grid gap-2">
-              {VOICE_LIST.map((v, i) => (
-                <button
-                  key={v.voice}
-                  onClick={() => { setVoiceIndex(i); setShowVoiceSelector(false); addSystemMessage(`已切换音色：${VOICE_LIST[i].name}`); }}
-                  className={`flex items-center gap-3 rounded-lg p-2.5 text-left transition-colors ${i === voiceIndex ? "bg-purple/20 border border-purple/40" : "hover:bg-purple/10"}`}
-                >
-                  <span className="text-xl">{v.gender === "female" ? "👩" : "👨"}</span>
-                  <div className="flex-1">
-                    <div className="text-sm text-ink">{v.name}</div>
-                    <div className="text-xs text-muted/70">{v.desc}</div>
-                  </div>
-                  {i === voiceIndex && <span className="text-blue">✓</span>}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Video PiP window */}
       {isVideoMode && (
