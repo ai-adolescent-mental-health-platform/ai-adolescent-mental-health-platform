@@ -59,7 +59,7 @@ public class XiaoaiConstants {
     public static final String ALIYUN_WS_URL_TEMPLATE = "wss://dashscope.aliyuncs.com/api-ws/v1/realtime?model=%s";
 
     /** 主模型名称 */
-    public static final String PRIMARY_MODEL = "qwen3.5-omni-plus-realtime";
+    public static final String PRIMARY_MODEL = "qwen-audio-3.0-realtime-plus";
 
     /** 心跳间隔（秒） */
     public static final int HEARTBEAT_INTERVAL_SECONDS = 30;

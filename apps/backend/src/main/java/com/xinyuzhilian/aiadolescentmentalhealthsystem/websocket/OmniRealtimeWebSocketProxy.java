@@ -2,7 +2,6 @@ package com.xinyuzhilian.aiadolescentmentalhealthsystem.websocket;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.xinyuzhilian.aiadolescentmentalhealthsystem.constant.XiaoaiConstants;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.service.XiaoaiRecordService;
 import jakarta.websocket.*;
 import jakarta.websocket.server.ServerEndpoint;
@@ -32,7 +31,7 @@ public class OmniRealtimeWebSocketProxy {
     // ==================== 常量配置 ====================
     
     private static final String ALIYUN_WS_URL_TEMPLATE = "wss://dashscope.aliyuncs.com/api-ws/v1/realtime?model=%s";
-    private static final String PRIMARY_MODEL = "qwen3.5-omni-plus-realtime";
+    private static final String PRIMARY_MODEL = "qwen-audio-3.0-realtime-plus";
     private static final int HEARTBEAT_INTERVAL_SECONDS = 30;
     
     // ==================== 静态变量 ====================
@@ -43,6 +42,15 @@ public class OmniRealtimeWebSocketProxy {
     public void setApiKey(String apiKey) {
         apiKeyStatic = apiKey;
         log.info("[DashScope] API Key 已加载: {}", apiKey != null && !apiKey.isEmpty() ? "yes" : "null");
+    }
+
+    private static String workspaceStatic;
+
+    @Value("${dashscope.api.workspace:}")
+    public void setWorkspace(String workspace) {
+        workspaceStatic = workspace;
+        log.info("[DashScope] 业务空间 ID(X-DashScope-WorkSpace): {}",
+                workspace != null && !workspace.isEmpty() ? workspace : "未配置");
     }
     
     private static HotSessionManager hotSessionManager;
@@ -291,11 +299,15 @@ public class OmniRealtimeWebSocketProxy {
         METADATA_MAP.get(frontSession).model = model;
         log.info("[连接#{}] 正在连接阿里云 - 模型: {}", connectionId, model);
         
-        Request request = new Request.Builder()
+        Request.Builder requestBuilder = new Request.Builder()
                 .url(aliyunWsUrl)
                 .addHeader("Authorization", "Bearer " + apiKeyStatic)
-                .addHeader("User-Agent", "AIAdolescentMentalHealthSystem/1.0")
-                .build();
+                .addHeader("User-Agent", "AIAdolescentMentalHealthSystem/1.0");
+        // 带业务空间归属的 Key 必须携带该头，否则鉴权/模型路由会失败
+        if (workspaceStatic != null && !workspaceStatic.isEmpty()) {
+            requestBuilder.addHeader("X-DashScope-WorkSpace", workspaceStatic);
+        }
+        Request request = requestBuilder.build();
         
         WebSocket aliyunWs = okHttpClient.newWebSocket(request, new WebSocketListener() {
             

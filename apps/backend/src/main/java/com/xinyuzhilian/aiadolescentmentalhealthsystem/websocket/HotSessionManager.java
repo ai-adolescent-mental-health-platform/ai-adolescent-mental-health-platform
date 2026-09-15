@@ -54,7 +54,7 @@ public class HotSessionManager {
     private static final String ALIYUN_WS_URL_TEMPLATE = "wss://dashscope.aliyuncs.com/api-ws/v1/realtime?model=%s";
     
     /** 使用的模型 */
-    private static final String MODEL = "qwen3.5-omni-plus-realtime";
+    private static final String MODEL = "qwen-audio-3.0-realtime-plus";
     
     /** 系统提示词 - 小爱倾听师角色设定 */
     private static final String INSTRUCTIONS =
@@ -87,13 +87,21 @@ public class HotSessionManager {
         "【对话目标】\n" +
         "让青少年愿意敞开心扉，把负面情绪说出来，在倾诉中缓解压力，感受到陪伴与温暖，慢慢平复心情，变得轻松开心一点。";
     
-    /** 音频音色 */
-    private static final String VOICE = "Ethan";
+    /**
+     * 音频音色。
+     * qwen-audio-3.0-realtime-plus 只支持 5 个系统音色：
+     * longanqian(默认)、longanlingxin、longanlingxi、longanxiaoxin、longanlufeng。
+     * 旧的 Ethan/Tina 等音色属于 Qwen3.5-Omni-Realtime 系列，对本模型无效。
+     */
+    private static final String VOICE = "longanqian";
     
     // ==================== Spring 配置 ====================
     
     @Value("${dashscope.api.key:}")
     private String apiKey;
+
+    @Value("${dashscope.api.workspace:}")
+    private String workspace;
     
     // ==================== 核心组件 ====================
     
@@ -268,22 +276,23 @@ public class HotSessionManager {
     private String buildSessionUpdateMessage() {
         try {
             Map<String, Object> session = new LinkedHashMap<>();
-            session.put("modalities", Arrays.asList("text", "audio"));
+            session.put("modalities", Arrays.asList("audio", "text"));
             session.put("voice", VOICE);
-            // 阿里云 Omni Realtime 支持 pcm 格式
+            // 裸 PCM：输入 16kHz、输出 24kHz，均为 16bit 单声道
             session.put("input_audio_format", "pcm");
             session.put("output_audio_format", "pcm");
             session.put("instructions", INSTRUCTIONS);
 
-            // turn_detection: 使用服务端 VAD 自动检测
+            // turn_detection: 使用服务端 VAD 自动检测。
+            // 注：qwen-audio-3.0-realtime-plus 只支持 server_vad 与 null(push-to-talk)，
+            // semantic_vad 仅 Qwen3.5-Omni-Realtime 系列支持。
             Map<String, Object> turnDetection = new LinkedHashMap<>();
             turnDetection.put("type", "server_vad");
             session.put("turn_detection", turnDetection);
 
-            // input_audio_transcription: 启用输入音频转录（用于展示用户说的话）
-            Map<String, Object> inputAudioTranscription = new LinkedHashMap<>();
-            inputAudioTranscription.put("model", "gummy-realtime-v1");
-            session.put("input_audio_transcription", inputAudioTranscription);
+            // 刻意不传 input_audio_transcription：服务端默认即自动转录
+            // （session.created 中为 qwen3-asr-flash-realtime），显式传入未支持的字段
+            // 会触发服务端参数校验错误。
 
             Map<String, Object> message = new LinkedHashMap<>();
             message.put("event_id", "warmup_" + System.currentTimeMillis());
@@ -316,11 +325,15 @@ public class HotSessionManager {
             HotSession[] sessionHolder = new HotSession[1];
             
             String url = String.format(ALIYUN_WS_URL_TEMPLATE, MODEL);
-            Request request = new Request.Builder()
+            Request.Builder requestBuilder = new Request.Builder()
                     .url(url)
                     .addHeader("Authorization", "Bearer " + apiKey)
-                    .addHeader("User-Agent", "AIAdolescentMentalHealthSystem-HotSession/1.0")
-                    .build();
+                    .addHeader("User-Agent", "AIAdolescentMentalHealthSystem-HotSession/1.0");
+            // 带业务空间归属的 Key 必须携带该头，否则鉴权/模型路由会失败
+            if (workspace != null && !workspace.isEmpty()) {
+                requestBuilder.addHeader("X-DashScope-WorkSpace", workspace);
+            }
+            Request request = requestBuilder.build();
             
             WebSocket webSocket = okHttpClient.newWebSocket(request, new WebSocketListener() {
                 
@@ -491,9 +504,9 @@ public class HotSessionManager {
     /**
      * 归还热会话
      * 
-     * 重要：为保证会话状态干净，归还会话时直接关闭旧会话，
-     * 而不是在池中复用。因为阿里云 Omni Realtime API 不提供
-     * 会话状态重置接口，复用旧会话可能导致输入音频转录配置失效。
+     * 重要：为保证会话状态干净，归还会话时直接关闭旧会话，而不是在池中复用。
+     * 因为 Realtime API 不提供会话状态重置接口，复用旧会话会残留上一轮的对话上下文
+     * 与声学状态（VAD 判定、已提交的对话项），影响下一轮体验。
      */
     public void returnSession(HotSession session) {
         if (session == null) return;
