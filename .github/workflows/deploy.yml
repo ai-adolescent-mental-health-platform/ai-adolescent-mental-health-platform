@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  # 手动重跑入口。轮换 secret（如 DASHSCOPE_API_KEY）后需要重新生成
+  # .env.production 并重建容器，此前只能靠往 main 造一次提交来触发。
+  workflow_dispatch:
 
 permissions:
   contents: read
