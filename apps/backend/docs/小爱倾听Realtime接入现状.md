@@ -90,6 +90,15 @@
   文字却是整块发过来」。两组事件当前均已接入，增量追加到同一气泡，
   `.done` 用服务端全文收尾。
 
+- **用户转写可能晚于 AI 回复到达，不能按到达顺序渲染**。服务端在
+  `input_audio_buffer.speech_stopped` 之后即启动模型回复，而输入转写由另一个 ASR
+  模型产出，会晚几秒。前端若等到
+  `conversation.item.input_audio_transcription.completed` 才创建用户气泡，界面就会
+  渲染成「AI 先答、用户后问」；刷新后又正常，因为库里存的是真实时序。
+  现改为在 `input_audio_buffer.committed` 标记「本轮转写未渲染」，AI 气泡创建时记下
+  锚点，转写到达时插回锚点之前。若上一轮转写始终没到，下一次 `committed` 会丢弃失效
+  锚点，避免把本轮转写插到上一轮回复前面。
+
 - **今日历史消息只能加载一次**。`loadTodayMessages` 所在 effect 若被重复触发，
   会把同一批历史消息在界面上叠加多份，表现为「说一句话却看到两条一模一样的回复」。
   此前 `loadTimeInfo` 的依赖数组里放了它自己 set 的 state（`memberType`/`dailyLimit`），

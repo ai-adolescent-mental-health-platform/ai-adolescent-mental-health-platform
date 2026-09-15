@@ -109,6 +109,13 @@ export function XiaoaiListenPage() {
   const hasTimeInfoRef = useRef(false);
   /** 正在流式输出的 AI 气泡 id；为空表示本轮需要新建一条 */
   const assistantMsgIdRef = useRef<string | null>(null);
+  /**
+   * 本轮用户音频已提交（input_audio_buffer.committed 已到）但转写尚未渲染。
+   * 服务端先起回复、ASR 转写后到，故 AI 气泡可能在用户气泡之前创建。
+   */
+  const awaitingUserTranscriptRef = useRef(false);
+  /** 已渲染但还缺用户气泡的 AI 气泡 id；转写迟到时插到它前面，保证"用户在前、AI 在后" */
+  const pendingUserAnchorRef = useRef<string | null>(null);
 
   // Audio playback queue
   const audioQueueRef = useRef<AudioBuffer[]>([]);
@@ -299,6 +306,8 @@ export function XiaoaiListenPage() {
     // 避免下一轮回复被并进上一条（只认"最后一条是不是 AI"会踩这个坑）。
     const id = generateId();
     assistantMsgIdRef.current = id;
+    // 本轮用户转写还没渲染就先起了回复：记下锚点，等转写到了插到这条前面
+    if (awaitingUserTranscriptRef.current) pendingUserAnchorRef.current = id;
     setChatMessages((prev) => [...prev, { id, role: "AI", content: delta, timestamp: new Date() }]);
   }, []);
 
@@ -314,7 +323,9 @@ export function XiaoaiListenPage() {
       setChatMessages((prev) => prev.map((m) => (m.id === streamingId ? { ...m, content: text } : m)));
       return;
     }
-    setChatMessages((prev) => [...prev, { id: generateId(), role: "AI", content: text, timestamp: new Date() }]);
+    const id = generateId();
+    if (awaitingUserTranscriptRef.current) pendingUserAnchorRef.current = id;
+    setChatMessages((prev) => [...prev, { id, role: "AI", content: text, timestamp: new Date() }]);
   }, []);
 
   // Handle WebSocket events
@@ -323,9 +334,19 @@ export function XiaoaiListenPage() {
     switch (type) {
       case "conversation.item.input_audio_transcription.completed": {
         const transcript = (data.transcript as string) || "";
-        if (transcript) {
-          setChatMessages((prev) => [...prev, { id: generateId(), role: "用户", content: transcript, timestamp: new Date() }]);
-        }
+        awaitingUserTranscriptRef.current = false;
+        const anchorId = pendingUserAnchorRef.current;
+        pendingUserAnchorRef.current = null;
+        if (!transcript) break;
+        const userMsg = { id: generateId(), role: "用户", content: transcript, timestamp: new Date() };
+        setChatMessages((prev) => {
+          // 转写比 AI 回复晚到时，本轮的 AI 气泡已经先渲染了，必须把用户消息
+          // 插回它前面，否则界面上会变成"AI 先答、用户后问"。
+          if (!anchorId) return [...prev, userMsg];
+          const anchorIndex = prev.findIndex((m) => m.id === anchorId);
+          if (anchorIndex < 0) return [...prev, userMsg];
+          return [...prev.slice(0, anchorIndex), userMsg, ...prev.slice(anchorIndex)];
+        });
         break;
       }
       case "response.audio_transcript.delta":
@@ -348,10 +369,10 @@ export function XiaoaiListenPage() {
       case "response.done": {
         // response.status 取值：completed / cancelled（被 VAD 打断）/ failed
         const status = (data.response as Record<string, unknown> | undefined)?.status as string | undefined;
+        // completed 是每轮的正常结束，不再提示；只保留异常与打断
         if (status === "cancelled") addSystemMessage("已打断上一轮回复");
         else if (status === "failed") addSystemMessage("回复生成失败");
-        else if (status === "completed") addSystemMessage("✅ 响应完成");
-        else addSystemMessage(`响应结束${status ? `（${status}）` : ""}`);
+        else if (status && status !== "completed") addSystemMessage(`响应结束（${status}）`);
         break;
       }
       case "session.created":
@@ -363,13 +384,13 @@ export function XiaoaiListenPage() {
         clearAudioQueue();
         break;
       case "input_audio_buffer.committed":
-        addSystemMessage("📤 音频已提交，等待处理...");
+        // 新一轮用户音频已提交。若上一轮的转写始终没到，锚点已失效，丢弃它，
+        // 免得本轮迟到的转写被插到上一轮那条 AI 气泡前面。
+        if (awaitingUserTranscriptRef.current) pendingUserAnchorRef.current = null;
+        awaitingUserTranscriptRef.current = true;
         break;
       case "input_audio_buffer.speech_started":
-        addSystemMessage("🎤 检测到语音开始...");
-        break;
       case "input_audio_buffer.speech_stopped":
-        addSystemMessage("🎤 检测到语音结束");
         break;
       case "session.init.ack":
         break;
@@ -411,7 +432,6 @@ export function XiaoaiListenPage() {
       ws.onopen = () => {
         setIsConnected(true);
         setIsConnecting(false);
-        addSystemMessage("连接成功，已初始化会话");
 
         if (user?.id) {
           ws.send(JSON.stringify({ type: "session.init", userId: user.id }));
@@ -460,7 +480,6 @@ export function XiaoaiListenPage() {
           },
         }));
 
-        addSystemMessage("当前模式: 文本+语音（VAD自动检测）");
         setTimeout(() => {
           if (remainingSecondsRef.current > 0 && isTimeExpiredRef.current === false) {
             startRecordInternal(ws);
@@ -503,7 +522,6 @@ export function XiaoaiListenPage() {
       return;
     }
     try {
-      addSystemMessage("🎤 正在请求麦克风权限...");
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { sampleRate: AUDIO_SAMPLE_RATE, channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       });
@@ -544,7 +562,6 @@ export function XiaoaiListenPage() {
       processor.connect(ctx.destination);
 
       setIsRecording(true);
-      addSystemMessage("🎤 开始说话，服务端VAD将自动检测语音结束...");
     } catch (err: unknown) {
       const error = err as DOMException;
       if (error.name === "NotAllowedError") {
@@ -570,6 +587,8 @@ export function XiaoaiListenPage() {
     setPreviewImage("");
     reconnectCountRef.current = 0;
     assistantMsgIdRef.current = null;
+    awaitingUserTranscriptRef.current = false;
+    pendingUserAnchorRef.current = null;
   }, [cleanupAudioNodes, stopTimers]);
 
   // Toggle mute
