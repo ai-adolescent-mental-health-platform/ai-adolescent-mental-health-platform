@@ -58,6 +58,29 @@
 - [ ] `response.audio.delta` 有数据，24kHz 播放正常
 - [ ] `response.done` 的 `status` 为 `completed`
 
+## 视频多模态：当前模型不支持
+
+`qwen-audio-3.0-realtime-plus` 是**纯语音**模型（官方用户指南标题即「语音转语音」），
+其 `session.update` 字段表中没有图像相关配置，官方全模态文档的上下文限制表里
+也没有它——**该模型没有视频能力**。
+
+视频/图像输入属于 **Qwen-Omni 系列**（`qwen3.5-omni-plus-realtime` 等），
+见 [全模态（实时多模态语音）](https://platform.qianwenai.com/docs/developer-guides/speech/realtime-multimodal-speech)。
+该文档的上下文限制表给出视频能力：plus 保留 50 轮 / 240 秒画面，flash 保留 50 轮 / 120 秒，
+视频以抽帧方式输入（建议 1 帧/秒）。
+
+若日后要启用视频，需要：
+
+1. 模型换回 `qwen3.5-omni-plus-realtime`（或 flash）
+2. 音色从 5 个 `longan*` 换回 Omni 系列音色（`Ethan`、`Tina` 等，见 [音色列表.md](音色列表.md)）
+3. WebSocket 协议下用 `input_image_buffer.append` 发送**整张图**的 base64，
+   不要分块；发送前需至少发过一帧音频
+4. 前端目前**完全没有把摄像头画面发给模型**：`toggleVideoMode()` 只做本地预览
+   （`<video>` 显示），`videoStreamRef` 没有任何一帧进入 WebSocket。
+   唯一发图的是手动上传图片的 `handleImageUpload`，且其分块发送方式无官方依据
+
+其余配置（不传 `input_audio_transcription`、`modalities` 顺序）两边通用，不需要回退。
+
 ## 已知未修的既有问题
 
 - **热会话池是死代码**：`HotSessionManager.MIN_HOT_SESSIONS = 0`，`warmUpSessions()` 循环 0 次，

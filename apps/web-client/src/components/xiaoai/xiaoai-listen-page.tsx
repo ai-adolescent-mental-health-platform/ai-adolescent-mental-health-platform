@@ -15,6 +15,8 @@ const VOICE = "longanqian";
 const WS_PATH = "/ws/omni-realtime";
 const AUDIO_SAMPLE_RATE = 16000;
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+/** 连接稳定多久后才视为成功并允许重置重连计数（毫秒） */
+const RECONNECT_STABLE_MS = 10_000;
 
 type ChatMessage = { id: string; role: string; content: string; timestamp: Date };
 
@@ -95,6 +97,7 @@ export function XiaoaiListenPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const videoStreamRef = useRef<MediaStream | null>(null);
   const reconnectCountRef = useRef(0);
+  const stabilityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTimeExpiredRef = useRef(false);
   const remainingSecondsRef = useRef(0);
   const isRecordingRef = useRef(false);
@@ -246,6 +249,7 @@ export function XiaoaiListenPage() {
   const stopTimers = useCallback(() => {
     if (countdownTimerRef.current) { clearInterval(countdownTimerRef.current); countdownTimerRef.current = null; }
     if (usageTimerRef.current) { clearInterval(usageTimerRef.current); usageTimerRef.current = null; }
+    if (stabilityTimerRef.current) { clearTimeout(stabilityTimerRef.current); stabilityTimerRef.current = null; }
   }, []);
 
   // Cleanup audio nodes
@@ -381,7 +385,6 @@ export function XiaoaiListenPage() {
       ws.onopen = () => {
         setIsConnected(true);
         setIsConnecting(false);
-        reconnectCountRef.current = 0;
         addSystemMessage("连接成功，已初始化会话");
 
         if (user?.id) {
@@ -404,6 +407,15 @@ export function XiaoaiListenPage() {
         usageTimerRef.current = setInterval(async () => {
           if (remainingSecondsRef.current > 0) await reportUsage();
         }, 5000);
+
+        // 连接稳定一段时间后才清零重连计数。
+        // 不能在 onopen 里立刻清零：上游连接失败时后端会马上关闭本连接，每次 onopen
+        // 都清零会让"最多重连 3 次"永不生效，变成每 2 秒无限重连；而后端每次连接都会
+        // INSERT 一条 ai_xiaoai_session 记录，等于持续往库里灌垃圾行。
+        if (stabilityTimerRef.current) clearTimeout(stabilityTimerRef.current);
+        stabilityTimerRef.current = setTimeout(() => {
+          reconnectCountRef.current = 0;
+        }, RECONNECT_STABLE_MS);
 
         // Session config
         ws.send(JSON.stringify({

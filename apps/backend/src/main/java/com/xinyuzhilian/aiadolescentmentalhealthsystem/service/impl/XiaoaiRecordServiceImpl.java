@@ -53,7 +53,10 @@ public class XiaoaiRecordServiceImpl implements XiaoaiRecordService {
         if (session != null) {
             session.setEndTime(LocalDateTime.now());
             session.setStatus(XiaoaiConstants.SESSION_STATUS_ENDED);
-            session.setEndReason(endReason);
+            // end_reason 为 varchar(32)：调用方可能传入带错误详情的长串（如
+            // "aliyun_failed:{...完整错误JSON...}"），直接写会 DataTruncation 导致
+            // 整条更新失败、结束原因与时长全部丢失。此处截断，完整原因见下方日志。
+            session.setEndReason(truncateEndReason(endReason));
 
             // 计算会话时长
             if (session.getStartTime() != null) {
@@ -66,6 +69,17 @@ public class XiaoaiRecordServiceImpl implements XiaoaiRecordService {
             log.info("[会话] 结束会话, sessionId: {}, reason: {}, duration: {}s", 
                     sessionId, endReason, session.getTotalSeconds());
         }
+    }
+
+    /**
+     * 将结束原因裁剪到 end_reason 列宽以内。
+     * 完整原因由调用方通过日志保留，落库只存前缀，避免整条更新因截断错误而失败。
+     */
+    private String truncateEndReason(String endReason) {
+        if (endReason == null || endReason.length() <= XiaoaiConstants.END_REASON_MAX_LENGTH) {
+            return endReason;
+        }
+        return endReason.substring(0, XiaoaiConstants.END_REASON_MAX_LENGTH);
     }
 
     @Override

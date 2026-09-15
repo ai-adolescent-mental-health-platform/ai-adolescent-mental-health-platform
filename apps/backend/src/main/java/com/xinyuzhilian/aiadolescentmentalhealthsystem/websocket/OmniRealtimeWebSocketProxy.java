@@ -424,10 +424,15 @@ public class OmniRealtimeWebSocketProxy {
     @OnMessage
     public void onMessage(Session frontSession, String message) {
         SessionMetadata metadata = METADATA_MAP.get(frontSession);
-        if (metadata != null) {
-            metadata.updateActivity();
+        if (metadata == null) {
+            // 元数据已随连接关闭被清理（此时上游 socket 同样已不存在）。
+            // 必须在此拦截：原实现在下方 metadata.userId = userId 处会抛 NPE，
+            // 被 catch 吞成"非JSON消息或解析失败"，导致 session.init 静默失效。
+            log.debug("[发送] 会话已关闭，忽略消息 - FrontSessionId: {}", frontSession.getId());
+            return;
         }
-        
+        metadata.updateActivity();
+
         // 处理用户初始化消息（包含 userId）
         if (message.startsWith("{")) {
             try {
