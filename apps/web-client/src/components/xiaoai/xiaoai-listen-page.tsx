@@ -15,6 +15,8 @@ const VOICE = "longanqian";
 const WS_PATH = "/ws/omni-realtime";
 const AUDIO_SAMPLE_RATE = 16000;
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+/** 非会员每日免费时长（秒），与后端 XiaoaiConstants.DEFAULT_DAILY_LIMIT 对齐 */
+const DEFAULT_DAILY_LIMIT_SECONDS = 300;
 /** 连接稳定多久后才视为成功并允许重置重连计数（毫秒） */
 const RECONNECT_STABLE_MS = 10_000;
 
@@ -101,6 +103,12 @@ export function XiaoaiListenPage() {
   const isTimeExpiredRef = useRef(false);
   const remainingSecondsRef = useRef(0);
   const isRecordingRef = useRef(false);
+  /** 今日历史消息只加载一次——重复加载会把同一条消息在界面上叠加成多份 */
+  const hasLoadedHistoryRef = useRef(false);
+  /** 是否已成功取到会员时长；失败分支据此决定要不要回退默认值 */
+  const hasTimeInfoRef = useRef(false);
+  /** 正在流式输出的 AI 气泡 id；为空表示本轮需要新建一条 */
+  const assistantMsgIdRef = useRef<string | null>(null);
 
   // Audio playback queue
   const audioQueueRef = useRef<AudioBuffer[]>([]);
@@ -192,17 +200,23 @@ export function XiaoaiListenPage() {
       const rem = (remainRes as unknown as number) ?? 0;
       setRemainingSeconds(rem);
       remainingSecondsRef.current = rem;
+      hasTimeInfoRef.current = true;
     } catch {
-      if (memberType === 0 && dailyLimit === 0) {
-        setDailyLimit(300);
-        setRemainingSeconds(300);
-        remainingSecondsRef.current = 300;
+      // 只在从未取到过时长时才回退默认值，否则一次偶发失败会把已生效的会员额度覆盖成 300 秒
+      if (!hasTimeInfoRef.current) {
+        setDailyLimit(DEFAULT_DAILY_LIMIT_SECONDS);
+        setRemainingSeconds(DEFAULT_DAILY_LIMIT_SECONDS);
+        remainingSecondsRef.current = DEFAULT_DAILY_LIMIT_SECONDS;
       }
     }
-  }, [memberType, dailyLimit]);
+  }, []);
 
   // Load today messages
   const loadTodayMessages = useCallback(async () => {
+    // 入口即置位：StrictMode 下 effect 会双跑，两次调用会并发进入，
+    // 放在 await 之后判断挡不住第二次。
+    if (hasLoadedHistoryRef.current) return;
+    hasLoadedHistoryRef.current = true;
     try {
       const res = await api.xiaoai.getTodayMessages();
       const msgs = res as unknown as { role: string; content: string; createTime?: string }[];
@@ -266,6 +280,43 @@ export function XiaoaiListenPage() {
     }
   }, []);
 
+  /**
+   * 把流式文本增量追加到当前 AI 气泡。
+   *
+   * modalities 为 ["audio","text"] 时，文本走 response.audio_transcript.delta；
+   * 仅当 modalities 只有 text 时才走 response.text.delta（官方服务端事件文档）。
+   * 两者都必须在增量事件里追加——只处理 .done 的话，整段文本要等回复生成完才一次性出现，
+   * 音频在实时播、文字却"啪"地整块蹦出来。
+   */
+  const appendAssistantDelta = useCallback((delta: string) => {
+    if (!delta) return;
+    const streamingId = assistantMsgIdRef.current;
+    if (streamingId) {
+      setChatMessages((prev) => prev.map((m) => (m.id === streamingId ? { ...m, content: m.content + delta } : m)));
+      return;
+    }
+    // 本轮还没有 AI 气泡，新建一条并记住 id；后续增量只追加到它，
+    // 避免下一轮回复被并进上一条（只认"最后一条是不是 AI"会踩这个坑）。
+    const id = generateId();
+    assistantMsgIdRef.current = id;
+    setChatMessages((prev) => [...prev, { id, role: "AI", content: delta, timestamp: new Date() }]);
+  }, []);
+
+  /**
+   * 用服务端下发的完整文本收尾当前 AI 气泡。
+   * .done 事件带全文，可纠正增量拼接期间的偏差。
+   */
+  const finalizeAssistantMessage = useCallback((text: string) => {
+    const streamingId = assistantMsgIdRef.current;
+    assistantMsgIdRef.current = null;
+    if (!text) return;
+    if (streamingId) {
+      setChatMessages((prev) => prev.map((m) => (m.id === streamingId ? { ...m, content: text } : m)));
+      return;
+    }
+    setChatMessages((prev) => [...prev, { id: generateId(), role: "AI", content: text, timestamp: new Date() }]);
+  }, []);
+
   // Handle WebSocket events
   const handleWsEvent = useCallback((data: Record<string, unknown>) => {
     const type = data.type as string;
@@ -277,50 +328,23 @@ export function XiaoaiListenPage() {
         }
         break;
       }
-      case "response.audio_transcript.done": {
-        const transcript = (data.transcript as string) || "";
-        if (transcript) {
-          setChatMessages((prev) => {
-            const last = prev[prev.length - 1];
-            if (last?.role === "AI") {
-              return [...prev.slice(0, -1), { ...last, content: transcript }];
-            }
-            return [...prev, { id: generateId(), role: "AI", content: transcript, timestamp: new Date() }];
-          });
-        }
+      case "response.audio_transcript.delta":
+        // 音频模式下的流式文本：不处理就只能等 .done 一次性蹦出全文。
+        appendAssistantDelta((data.delta as string) || "");
         break;
-      }
+      case "response.audio_transcript.done":
+        finalizeAssistantMessage((data.transcript as string) || "");
+        break;
       case "response.audio.delta":
         playAudio(data.delta as string);
         break;
-      case "response.text.delta": {
+      case "response.text.delta":
         // 纯文本模式（modalities 仅含 text）下的输出事件；音频模式下不会出现。
-        // 缺这两个 case 会在纯文本模式下表现为「界面毫无反应」。
-        const delta = (data.delta as string) || "";
-        if (delta) {
-          setChatMessages((prev) => {
-            const last = prev[prev.length - 1];
-            if (last?.role === "AI") {
-              return [...prev.slice(0, -1), { ...last, content: last.content + delta }];
-            }
-            return [...prev, { id: generateId(), role: "AI", content: delta, timestamp: new Date() }];
-          });
-        }
+        appendAssistantDelta((data.delta as string) || "");
         break;
-      }
-      case "response.text.done": {
-        const text = (data.text as string) || "";
-        if (text) {
-          setChatMessages((prev) => {
-            const last = prev[prev.length - 1];
-            if (last?.role === "AI") {
-              return [...prev.slice(0, -1), { ...last, content: text }];
-            }
-            return [...prev, { id: generateId(), role: "AI", content: text, timestamp: new Date() }];
-          });
-        }
+      case "response.text.done":
+        finalizeAssistantMessage((data.text as string) || "");
         break;
-      }
       case "response.done": {
         // response.status 取值：completed / cancelled（被 VAD 打断）/ failed
         const status = (data.response as Record<string, unknown> | undefined)?.status as string | undefined;
@@ -334,6 +358,8 @@ export function XiaoaiListenPage() {
       case "session.updated":
         break;
       case "response.created":
+        // 新一轮回复开始：清空播放队列，并让首个 delta 新建气泡
+        assistantMsgIdRef.current = null;
         clearAudioQueue();
         break;
       case "input_audio_buffer.committed":
@@ -351,7 +377,7 @@ export function XiaoaiListenPage() {
         addSystemMessage(`错误: ${JSON.stringify(data.error)}`);
         break;
     }
-  }, [addSystemMessage, playAudio, clearAudioQueue]);
+  }, [addSystemMessage, playAudio, clearAudioQueue, appendAssistantDelta, finalizeAssistantMessage]);
 
   // Connect WebSocket
   const startConversation = useCallback(async () => {
@@ -543,6 +569,7 @@ export function XiaoaiListenPage() {
     setIsRecording(false);
     setPreviewImage("");
     reconnectCountRef.current = 0;
+    assistantMsgIdRef.current = null;
   }, [cleanupAudioNodes, stopTimers]);
 
   // Toggle mute

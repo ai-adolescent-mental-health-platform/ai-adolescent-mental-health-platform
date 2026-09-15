@@ -81,6 +81,23 @@
 
 其余配置（不传 `input_audio_transcription`、`modalities` 顺序）两边通用，不需要回退。
 
+## 前端事件契约易错点
+
+- **文本事件随输出模态切换**。`modalities` 为 `["audio","text"]` 时，文本走
+  `response.audio_transcript.delta` / `.done`；只有 `["text"]` 时才是
+  `response.text.delta` / `.done`（官方服务端事件文档）。前端必须处理**增量**事件：
+  只处理 `.done` 的话，整段文字要等回复生成完才一次性蹦出来，表现为「音频在实时播、
+  文字却是整块发过来」。两组事件当前均已接入，增量追加到同一气泡，
+  `.done` 用服务端全文收尾。
+
+- **今日历史消息只能加载一次**。`loadTodayMessages` 所在 effect 若被重复触发，
+  会把同一批历史消息在界面上叠加多份，表现为「说一句话却看到两条一模一样的回复」。
+  此前 `loadTimeInfo` 的依赖数组里放了它自己 set 的 state（`memberType`/`dailyLimit`），
+  首次拉取成功后依赖变化导致 effect 重跑，历史消息因此被加载两次。
+  现已把该依赖去掉，并在 `loadTodayMessages` 入口加加载标记兜底。
+  排查时注意区分：这种重复**只存在于界面**，数据库中只有一条用户消息与一条 AI 消息
+  （刷新后若数据库真是两条，界面会显示四条）。
+
 ## 已知未修的既有问题
 
 - **热会话池是死代码**：`HotSessionManager.MIN_HOT_SESSIONS = 0`，`warmUpSessions()` 循环 0 次，
