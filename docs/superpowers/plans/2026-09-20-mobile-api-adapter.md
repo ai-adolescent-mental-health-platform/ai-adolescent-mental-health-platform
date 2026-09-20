@@ -439,7 +439,7 @@ git commit -m "test(api-client): 固定 uni 适配器的 401/403/网络/业务�
 
 **Interfaces:**
 - Consumes: Task 2 的 `createUniAdapter`
-- Produces: 子路径导出 `@ai-adolescent-mental-health/api-client/uni`
+- Produces: 根入口导出 `createUniAdapter` 与类型 `UniRequestLike` / `UniRequestOptions` / `UniRequestTask`
 
 - [ ] **Step 1: 写失败测试**
 

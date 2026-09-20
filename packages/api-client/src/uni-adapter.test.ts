@@ -112,3 +112,38 @@ describe("uni adapter public entry", () => {
     expect(typeof (root as Record<string, unknown>).createUniAdapter).toBe("function");
   });
 });
+
+describe("createUniAdapter absolute url", () => {
+  it("keeps an absolute url and ignores baseURL, matching axios buildFullPath", async () => {
+    const { request, calls } = fakeUni({ statusCode: 200, data: { code: 200, message: "ok", data: null } });
+    const http = createHttpClient({ baseURL: "http://localhost:8080", adapter: createUniAdapter(request) });
+
+    await http.get("https://oss.example.com/avatar.png");
+
+    expect(calls[0].url).toBe("https://oss.example.com/avatar.png");
+  });
+
+  it("still appends query params to an absolute url", async () => {
+    const { request, calls } = fakeUni({ statusCode: 200, data: { code: 200, message: "ok", data: null } });
+    const http = createHttpClient({ baseURL: "http://localhost:8080", adapter: createUniAdapter(request) });
+
+    await http.get("https://oss.example.com/avatar.png", { query: { sign: "abc", expire: 120 } });
+
+    expect(calls[0].url).toBe("https://oss.example.com/avatar.png?sign=abc&expire=120");
+  });
+});
+
+describe("createUniAdapter synchronous throw", () => {
+  it("maps a synchronously throwing uni.request to kind=network, not parse", async () => {
+    const request = vi.fn(() => {
+      throw new Error("uni.request is not available");
+    }) as unknown as UniRequestLike;
+
+    const http = createHttpClient({ baseURL: "http://localhost:8080", adapter: createUniAdapter(request) });
+
+    await expect(http.get("/anything")).rejects.toMatchObject({
+      name: "ApiClientError",
+      kind: "network",
+    });
+  });
+});
