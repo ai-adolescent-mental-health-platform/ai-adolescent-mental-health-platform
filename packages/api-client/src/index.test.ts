@@ -297,3 +297,26 @@ describe("api.user forgot-password", () => {
     });
   });
 });
+
+describe("createHttpClient adapter injection", () => {
+  it("uses the injected adapter and unwraps the response envelope", async () => {
+    const adapter = vi.fn().mockResolvedValue({
+      data: { code: 200, message: "ok", data: { id: 7 } },
+      status: 200,
+      statusText: "OK",
+      headers: {},
+      config: {} as never,
+    });
+
+    const http = createHttpClient({ baseURL: "http://localhost", adapter });
+    const result = await http.get<{ id: number }>("/ping");
+
+    expect(adapter).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ id: 7 });
+  });
+
+  it("does not install an injected adapter when the option is omitted", () => {
+    const http = createHttpClient({ baseURL: "http://localhost" });
+    expect(http.raw.defaults.adapter).not.toBeUndefined();
+  });
+});
