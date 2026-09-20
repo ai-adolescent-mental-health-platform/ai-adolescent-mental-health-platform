@@ -105,3 +105,10 @@ describe("createUniAdapter error mapping", () => {
     });
   });
 });
+
+describe("uni adapter public entry", () => {
+  it("is re-exported from the package root", async () => {
+    const root = await import("./index.js");
+    expect(typeof (root as Record<string, unknown>).createUniAdapter).toBe("function");
+  });
+});

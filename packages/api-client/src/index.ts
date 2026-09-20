@@ -837,3 +837,6 @@ export async function streamAiChat(
     }
   }
 }
+
+export { createUniAdapter } from "./uni-adapter.js";
+export type { UniRequestLike, UniRequestOptions, UniRequestTask } from "./uni-adapter.js";
