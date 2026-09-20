@@ -50,3 +50,58 @@ describe("createUniAdapter success path", () => {
     expect(calls[0].url).toBe("http://localhost:8080/content/list?page=1&size=20");
   });
 });
+
+describe("createUniAdapter error mapping", () => {
+  it("maps HTTP 401 to ApiClientError kind=unauthorized and fires onUnauthorized", async () => {
+    const { request } = fakeUni({ statusCode: 401, data: { code: 401, message: "登录已过期" } });
+    const onUnauthorized = vi.fn();
+    const http = createHttpClient({
+      baseURL: "http://localhost:8080",
+      onUnauthorized,
+      adapter: createUniAdapter(request),
+    });
+
+    await expect(http.get("/user/profile")).rejects.toMatchObject({
+      name: "ApiClientError",
+      kind: "unauthorized",
+      status: 401,
+    });
+    expect(onUnauthorized).toHaveBeenCalledTimes(1);
+  });
+
+  it("maps HTTP 403 to ApiClientError kind=forbidden", async () => {
+    const { request } = fakeUni({ statusCode: 403, data: { code: 403, message: "权限不足" } });
+    const http = createHttpClient({ baseURL: "http://localhost:8080", adapter: createUniAdapter(request) });
+
+    await expect(http.get("/admin/users")).rejects.toMatchObject({
+      name: "ApiClientError",
+      kind: "forbidden",
+      status: 403,
+    });
+  });
+
+  it("maps a transport failure to kind=network, not an HTTP error", async () => {
+    const request = vi.fn((options: UniRequestOptions) => {
+      options.fail?.({ errMsg: "request:fail timeout" });
+      return { abort: vi.fn() };
+    }) as unknown as UniRequestLike;
+
+    const http = createHttpClient({ baseURL: "http://localhost:8080", adapter: createUniAdapter(request) });
+
+    await expect(http.get("/anything")).rejects.toMatchObject({
+      name: "ApiClientError",
+      kind: "network",
+    });
+  });
+
+  it("maps a business error code to kind=business and keeps the code", async () => {
+    const { request } = fakeUni({ statusCode: 200, data: { code: 4001, message: "用户名已存在" } });
+    const http = createHttpClient({ baseURL: "http://localhost:8080", adapter: createUniAdapter(request) });
+
+    await expect(http.post("/user/register", {})).rejects.toMatchObject({
+      name: "ApiClientError",
+      kind: "business",
+      code: 4001,
+    });
+  });
+});

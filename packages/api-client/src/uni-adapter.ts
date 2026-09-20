@@ -1,4 +1,4 @@
-import type { AxiosAdapter, AxiosResponse, InternalAxiosRequestConfig } from "axios";
+import { AxiosError, type AxiosAdapter, type AxiosResponse, type InternalAxiosRequestConfig } from "axios";
 
 export type UniRequestOptions = {
   url: string;
@@ -69,11 +69,20 @@ export function createUniAdapter(request: UniRequestLike): AxiosAdapter {
             return;
           }
 
-          // 暂时用朴素 Error。错误映射在 Task 3 中修正——那里的测试会暴露问题。
-          reject(new Error(`Request failed with status code ${res.statusCode}`));
+          // 第五个参数必须是 response：toError 读 axiosError.response?.status 来分类。
+          reject(
+            new AxiosError(
+              `Request failed with status code ${res.statusCode}`,
+              String(res.statusCode),
+              config,
+              undefined,
+              response,
+            ),
+          );
         },
         fail: (err) => {
-          reject(new Error(err?.errMsg ?? "Network Error"));
+          // 传输层失败没有响应对象，第五个参数必须是 undefined，否则会被误判成 HTTP 错误。
+          reject(new AxiosError(err?.errMsg ?? "Network Error", AxiosError.ERR_NETWORK, config, undefined, undefined));
         },
       });
     });
