@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import type { AxiosAdapter } from "axios";
+import axios, { type AxiosAdapter } from "axios";
 import { createHttpClient, createApiClient, streamAiChat, ApiClientError } from "./index.js";
 
 function mockHttp(get?: unknown, post?: unknown, put?: unknown, del?: unknown) {
@@ -318,14 +318,17 @@ describe("createHttpClient adapter injection", () => {
 
   it("installs the injected adapter only when the option is provided", () => {
     const injected = vi.fn();
+    const createSpy = vi.spyOn(axios, "create");
 
-    const withAdapter = createHttpClient({
+    createHttpClient({
       baseURL: "http://localhost",
       adapter: injected as unknown as AxiosAdapter,
     });
-    const withoutAdapter = createHttpClient({ baseURL: "http://localhost" });
+    expect(createSpy).toHaveBeenCalledWith(expect.objectContaining({ adapter: injected }));
 
-    expect(withAdapter.raw.defaults.adapter).toBe(injected);
-    expect(withoutAdapter.raw.defaults.adapter).not.toBe(injected);
+    createHttpClient({ baseURL: "http://localhost" });
+    expect(createSpy).toHaveBeenCalledWith(expect.objectContaining({ adapter: undefined }));
+
+    createSpy.mockRestore();
   });
 });
