@@ -46,6 +46,7 @@ apps/backend/src/test/resources/application-*.properties
 .codegraph/
 .hermes/
 .playwright-mcp/
+.superpowers/
 
 # Local scratch & screenshots (not source)
 ai-pouf.png

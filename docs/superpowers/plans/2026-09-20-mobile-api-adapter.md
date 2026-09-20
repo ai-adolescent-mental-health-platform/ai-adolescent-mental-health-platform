@@ -433,8 +433,9 @@ git commit -m "test(api-client): 固定 uni 适配器的 401/403/网络/业务�
 
 **Files:**
 - Modify: `packages/api-client/src/index.ts`（文件末尾追加导出）
-- Modify: `packages/api-client/package.json`（新增 exports 子路径）
 - Test: `packages/api-client/src/uni-adapter.test.ts`（追加一条导入路径断言）
+
+**不修改 `package.json`。** Step 3 说明了原因。
 
 **Interfaces:**
 - Consumes: Task 2 的 `createUniAdapter`
@@ -495,7 +496,7 @@ Expected: 三条全部通过。**最后一条是关键**——它证明改动没
 - [ ] **Step 6: 提交**
 
 ```bash
-git add packages/api-client/src/index.ts packages/api-client/package.json
+git add packages/api-client/src/index.ts
 git commit -m "feat(api-client): 导出 uni.request 适配器"
 ```
 
