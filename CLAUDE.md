@@ -9,6 +9,8 @@
 | `apps/backend` | Spring Boot 3.5.9 / Java 17 | 8080 | 后端 API，所有端共享 |
 | `apps/web-client` | Next.js 16 / React 19 / Tailwind 4 | **3300** | 青少年/家长用户端，**pouf 黏土设计** |
 | `apps/admin-portal` | Next.js 16 / React 19 | **3101** | 运营/心理咨询师管理端 |
+| `apps/mobile` | uni-app（具体形态由实施者定） | — | 手机端 App，**当前为空壳**。设计见 `docs/superpowers/specs/2026-09-20-mobile-app-design.md`；任务见 issue #32 起 |
+| `apps/parent-portal` | 待定 | — | 家长端，**当前为空壳**，尚未立项 |
 
 建库 SQL 在 `apps/backend/sql/`（`schema.sql` 全量表结构 + 补丁文件 + 字典种子数据），增量与运维脚本在 `infra/sql/`。
 
@@ -37,3 +39,4 @@ pnpm test:backend
 
 - 用户端 pouf 页面设计规范：[apps/web-client/design.md](apps/web-client/design.md)
 - 各 app 详细指引：`apps/<name>/AGENTS.md`（进入前先读）
+- 设计定稿与实施计划：`docs/superpowers/specs/`（设计文档，自包含）、`docs/superpowers/plans/`（实施计划）
