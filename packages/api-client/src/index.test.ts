@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import type { AxiosAdapter } from "axios";
 import { createHttpClient, createApiClient, streamAiChat, ApiClientError } from "./index.js";
 
 function mockHttp(get?: unknown, post?: unknown, put?: unknown, del?: unknown) {
@@ -315,8 +316,16 @@ describe("createHttpClient adapter injection", () => {
     expect(result).toEqual({ id: 7 });
   });
 
-  it("does not install an injected adapter when the option is omitted", () => {
-    const http = createHttpClient({ baseURL: "http://localhost" });
-    expect(http.raw.defaults.adapter).not.toBeUndefined();
+  it("installs the injected adapter only when the option is provided", () => {
+    const injected = vi.fn();
+
+    const withAdapter = createHttpClient({
+      baseURL: "http://localhost",
+      adapter: injected as unknown as AxiosAdapter,
+    });
+    const withoutAdapter = createHttpClient({ baseURL: "http://localhost" });
+
+    expect(withAdapter.raw.defaults.adapter).toBe(injected);
+    expect(withoutAdapter.raw.defaults.adapter).not.toBe(injected);
   });
 });
