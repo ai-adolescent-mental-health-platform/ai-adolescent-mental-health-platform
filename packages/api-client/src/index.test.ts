@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import axios, { type AxiosAdapter } from "axios";
 import { createHttpClient, createApiClient, streamAiChat, ApiClientError } from "./index.js";
 
 function mockHttp(get?: unknown, post?: unknown, put?: unknown, del?: unknown) {
@@ -295,5 +296,39 @@ describe("api.user forgot-password", () => {
       newPassword: "newPwd",
       confirmPassword: "newPwd",
     });
+  });
+});
+
+describe("createHttpClient adapter injection", () => {
+  it("uses the injected adapter and unwraps the response envelope", async () => {
+    const adapter = vi.fn().mockResolvedValue({
+      data: { code: 200, message: "ok", data: { id: 7 } },
+      status: 200,
+      statusText: "OK",
+      headers: {},
+      config: {} as never,
+    });
+
+    const http = createHttpClient({ baseURL: "http://localhost", adapter });
+    const result = await http.get<{ id: number }>("/ping");
+
+    expect(adapter).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ id: 7 });
+  });
+
+  it("installs the injected adapter only when the option is provided", () => {
+    const injected = vi.fn();
+    const createSpy = vi.spyOn(axios, "create");
+
+    createHttpClient({
+      baseURL: "http://localhost",
+      adapter: injected as unknown as AxiosAdapter,
+    });
+    expect(createSpy).toHaveBeenCalledWith(expect.objectContaining({ adapter: injected }));
+
+    createHttpClient({ baseURL: "http://localhost" });
+    expect(createSpy).toHaveBeenCalledWith(expect.objectContaining({ adapter: undefined }));
+
+    createSpy.mockRestore();
   });
 });

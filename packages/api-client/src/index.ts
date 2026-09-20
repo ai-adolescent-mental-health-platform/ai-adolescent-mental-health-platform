@@ -1,4 +1,4 @@
-import axios, { AxiosError, type AxiosInstance, type AxiosRequestConfig } from "axios";
+import axios, { AxiosError, type AxiosAdapter, type AxiosInstance, type AxiosRequestConfig } from "axios";
 import type {
   AiMessage,
   AiSession,
@@ -43,6 +43,11 @@ export type HttpClientOptions = {
   getToken?: () => string | undefined | null;
   onUnauthorized?: () => void;
   timeout?: number;
+  /**
+   * 可选的自定义传输层。不传时走 axios 默认实现（浏览器 / Node）。
+   * uni-app 运行时通过它注入 uni.request 适配器，见 uni-adapter.ts。
+   */
+  adapter?: AxiosAdapter;
 };
 
 export type RequestConfig = Omit<AxiosRequestConfig, "url" | "baseURL" | "method" | "params" | "data"> & {
@@ -403,6 +408,7 @@ export function createHttpClient(options: HttpClientOptions) {
     headers: {
       "Content-Type": "application/json;charset=UTF-8",
     },
+    adapter: options.adapter,
   });
 
   client.interceptors.request.use((config) => {
@@ -831,3 +837,6 @@ export async function streamAiChat(
     }
   }
 }
+
+export { createUniAdapter } from "./uni-adapter.js";
+export type { UniRequestLike, UniRequestOptions, UniRequestTask } from "./uni-adapter.js";
