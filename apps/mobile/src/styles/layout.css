@@ -54,3 +54,21 @@
 .m-field__value {
   color: var(--color-text-primary);
 }
+
+/* 表单错误提示：只用变量层取色，正文对比度见 theme.css 实测值 */
+.m-error {
+  color: var(--color-danger);
+  font-size: var(--font-caption);
+}
+
+/* 输入框 + 右侧动作按钮（获取验证码）的横向布局 */
+.m-code-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 16rpx;
+}
+
+.m-code-row__field {
+  flex: 1;
+  min-width: 0;
+}

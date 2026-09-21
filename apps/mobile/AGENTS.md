@@ -11,8 +11,8 @@
 - 项目形态取舍见设计文档 11.1：选 CLI 形态是为了保留 pnpm workspace 插槽、直接 import `packages/domain`，
   代价是多端编译配置的学习成本
 - 交付目标端：**App（Android / iOS）**，H5 仅用于本地预览
-- 当前进度：工程骨架 + 会话存储 + 路由守卫 + 基础 UI 组件最小集。
-  登录/注册/个人中心的真实业务在 issue #33 起接入（`packages/api-client`）
+- 当前进度：工程骨架 + 会话存储 + 路由守卫 + 基础 UI 组件最小集 + 统一 api 层（`src/lib/api.ts`）
+  + 登录 / 注册 / 找回密码 / 个人中心会话收口（issue #33）。**真实后端联调与 App 端真机验证均未进行**
 
 ## 二、目录结构
 
@@ -31,13 +31,15 @@ apps/mobile/
     │   ├── theme.css           # 主题变量层：唯一色值来源，含实测对比度
     │   └── layout.css          # 跨页共享布局类，不含色值
     ├── lib/
+    │   ├── api.ts              # 统一 api 层：页面唯一的请求出口（含 adapter 两处断言，见文件内注释）
     │   ├── session.ts          # 会话四个操作（uni 存储）
+    │   ├── validation.ts       # 表单校验（正则对齐后端 RegexConstant）+ 密码强度
     │   └── safe-redirect.ts    # 登录回跳目标校验
     ├── router/
     │   ├── routes.ts           # 路由表（决定哪些页面需要登录）
     │   └── guard.ts            # 全局导航拦截 + 页面级兜底
     ├── components/             # MButton / MInput / MCard / MNavBar
-    └── pages/                  # home / consultation / me / login / register
+    └── pages/                  # home / consultation / me / login / register / forgot-password
 ```
 
 ## 三、命令
@@ -69,8 +71,15 @@ H5 预览跑通不代表 App 端可用（设计文档 6.1）。
 6. **路由守卫是两层**：`uni.addInterceptor` 全局拦截 + 受保护页面 `onLoad` 兜底。
    新增页面必须同时在 `src/router/routes.ts` 与 `src/pages.json` 登记；
    routes.ts 对**未登记路径按「需要登录」处理**，忘记登记不会导致页面裸奔。
-7. **不跨 app 复制源文件**（根 AGENTS.md 规则 3）。
-8. **文档不写 emoji**。
+7. **tab 页取数用 `onShow`，不用 `onLoad`**（本工作区实测踩过）。
+   原因：uni-app 会保留并复用 tabBar 页面的实例，**再次切回该 tab 时 `onLoad` 不会重新触发**。
+   若把「读会话」「拉资料」这类逻辑只写在 `onLoad`，就会出现**已登录但页面仍显示上次甚至初始占位值**
+   的陈旧状态（实测现象：登录后切回个人中心仍显示「未记录 / token 无」）。
+   适用范围：**全部 tabBar 页面**，即 `src/pages.json` 的 `tabBar.list` 里的
+   `pages/home/index`、`pages/consultation/index`、`pages/me/index` 三个页面。
+   非 tab 页面按普通页面处理，`onLoad` 取数即可。新增 tab 页时必须遵守本条。
+8. **不跨 app 复制源文件**（根 AGENTS.md 规则 3）。
+9. **文档不写 emoji**。
 
 ## 五、已知坑（均在本工作区实测）
 
@@ -89,10 +98,22 @@ H5 预览跑通不代表 App 端可用（设计文档 6.1）。
   重复声明只会引入 `import.meta.url` 这类在 CJS 配置下不可用的写法。
 - `vue-tsc` 会把 `<input>` 解析成 DOM 的 input 元素类型而非 uni 组件，事件回调参数不要写 DOM 形状的类型，
   用 `unknown` 收窄（见 `MInput.vue`）。
+- **回跳参数不要自己 `encodeURIComponent`**：uni-app 的 H5 路由在序列化 hash 时会再编码一次，
+  先编码会得到 `redirect=%252Fpages%252Fme%252Findex` 这样的双重编码。会话内仍能解回正确路径，
+  但**用户在该页刷新后回跳目标会丢失**（`safeRedirect` 判定 `%2Fpages/...` 不是合法应用内路径而退回首页）。
+  见 `router/guard.ts` 的 `buildLoginUrl`。
 
-## 六、待接入（issue #33 起）
+## 六、共享层接入现状与遗留
 
-`packages/api-client` + `createUniAdapter`。接入前需注意：适配器当前的入参类型与真实 uni 类型存在两处不兼容
-（`method: string` 对 uni 的字面量联合、`data?: unknown` 对 `string | AnyObject | ArrayBuffer`），
-直接 `createUniAdapter(uni.request)` 无法通过类型检查；`uni.request` 的启用 promisify 重载后返回 `Promise`，
-需显式转换。详见 issue #32 的类型假设验证结论。
+统一 api 层已在 `src/lib/api.ts` 落地（`createHttpClient` + `createUniAdapter` + `createApiClient`），
+页面一律经 `api` 调用，**禁止**在页面内直接 `uni.request` / `fetch`；401 统一由
+`createHttpClient` 的 `onUnauthorized` 处理，页面层不得自行判断状态码。
+
+该文件里的两处类型断言是接线层面的权宜处理，成因写在文件注释中：适配器入参
+（`method: string` / `data?: unknown`）与 uni 真实类型逆变不兼容；`uni.request` 的 promisify 重载
+被排在前面，导致类型层面返回 `Promise`（缺 `abort`）。根治应在 `packages/api-client` 侧收窄
+`UniRequestOptions`，不属于手机端工作区。
+
+**遗留（issue #32 记录，仍未修）**：适配器丢弃了 `uni.request` 返回的 `RequestTask` 句柄，
+`abort()` 从未被调用，因此 axios 的取消语义在手机端不生效。登录 / 注册 / 找回密码已走该链路，
+但请求都很短，当前影响有限。

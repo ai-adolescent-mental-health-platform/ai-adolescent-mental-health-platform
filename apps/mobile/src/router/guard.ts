@@ -25,7 +25,14 @@ let redirecting = false;
 /** 构造登录页地址，并把原目标页带上，供登录成功后回跳。 */
 export function buildLoginUrl(target: string): string {
   const safeTarget = safeRedirect(target, HOME_PAGE);
-  return `${LOGIN_PAGE}?redirect=${encodeURIComponent(safeTarget)}`;
+  /*
+   * 这里**不做** encodeURIComponent：uni-app 的 H5 路由在序列化 hash 时会自行编码查询值，
+   * 若此处先编码一次，地址栏会出现 %252F 这样的双重编码；会话内虽仍能解回正确路径，
+   * 但用户在该页刷新后会解析成 "%2Fpages/..."，safeRedirect 判定不是合法应用内路径而退回首页，
+   * 等于刷新即丢失回跳目标。所有进入本函数的 target 都先经 safeRedirect 校验且已去掉查询串
+   * （见 routes.normalizePath），因此直接拼接是安全的。
+   */
+  return `${LOGIN_PAGE}?redirect=${safeTarget}`;
 }
 
 /** 取消当前导航并改跳登录页。 */

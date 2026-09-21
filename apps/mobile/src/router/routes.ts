@@ -23,6 +23,7 @@ export type RouteRule = {
 
 export const LOGIN_PAGE = "/pages/login/index";
 export const REGISTER_PAGE = "/pages/register/index";
+export const FORGOT_PASSWORD_PAGE = "/pages/forgot-password/index";
 export const HOME_PAGE = "/pages/home/index";
 
 export const ROUTES: RouteRule[] = [
@@ -31,6 +32,7 @@ export const ROUTES: RouteRule[] = [
   { path: "/pages/me/index", title: "个人中心", requiresAuth: true, isTab: true },
   { path: LOGIN_PAGE, title: "登录", requiresAuth: false },
   { path: REGISTER_PAGE, title: "注册", requiresAuth: false },
+  { path: FORGOT_PASSWORD_PAGE, title: "忘记密码", requiresAuth: false },
 ];
 
 /** 受登录保护的页面路径集合。 */

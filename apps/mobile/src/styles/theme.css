@@ -50,6 +50,8 @@ page {
   /* 状态色 */
   --color-danger: #a32017;
   --color-on-danger: #ffffff;
+  /* warning 用于密码强度「中」档等指示；实测 白底 5.93:1、进度轨道 #D5E2D9 上 4.43:1 */
+  --color-warning: #8a5a00;
 
   /* 尺寸与节奏 */
   --radius-card: 16rpx;
