@@ -48,6 +48,11 @@ apps/backend/src/test/resources/application-*.properties
 .playwright-mcp/
 .superpowers/
 
+# HBuilderX 导入工程时自动生成的 IDE 本地状态
+# （apps/mobile/.hbuilderx/launch.json 等），不属于源码，
+# 不忽略会污染其他开发者的工作区
+apps/mobile/.hbuilderx/
+
 # Local scratch & screenshots (not source)
 ai-pouf.png
 login-current.png
