@@ -13,7 +13,7 @@ import MCard from "@/components/MCard.vue";
 import MInput from "@/components/MInput.vue";
 import MNavBar from "@/components/MNavBar.vue";
 import { api } from "@/lib/api";
-import { LOGIN_PAGE } from "@/router/routes";
+import { LOGIN_PAGE, LEGAL_PAGE } from "@/router/routes";
 import {
   PASSWORD_HINT,
   USERNAME_HINT,
@@ -73,6 +73,11 @@ function describeError(err: unknown, fallback: string): string {
 
 function toggleAgreed(): void {
   agreed.value = !agreed.value;
+}
+
+/** 打开协议正文（不要求登录，注册前即可查阅）。 */
+function openLegal(tab: "terms" | "privacy"): void {
+  uni.navigateTo({ url: `${LEGAL_PAGE}?tab=${tab}` });
 }
 
 async function handleSendCode(): Promise<void> {
@@ -205,9 +210,14 @@ async function handleRegister(): Promise<void> {
         <MInput v-model="code" label="验证码" placeholder="请输入验证码" />
         <MInput v-model="phone" label="手机号（选填）" placeholder="请输入手机号" />
 
-        <view class="agree" @tap="toggleAgreed">
-          <view class="agree__box" :class="{ 'agree__box--on': agreed }" />
-          <text class="agree__text">我已阅读并同意《心愈智联用户服务协议》和《隐私政策》</text>
+        <view class="agree">
+          <view class="agree__box" :class="{ 'agree__box--on': agreed }" @tap="toggleAgreed" />
+          <view class="agree__text">
+            <text class="agree__plain" @tap="toggleAgreed">我已阅读并同意</text>
+            <text class="agree__link" @tap.stop="openLegal('terms')">《心愈智联用户服务协议》</text>
+            <text class="agree__plain" @tap="toggleAgreed">和</text>
+            <text class="agree__link" @tap.stop="openLegal('privacy')">《隐私政策》</text>
+          </view>
         </view>
 
         <text v-if="error" class="m-error">{{ error }}</text>
@@ -281,6 +291,18 @@ async function handleRegister(): Promise<void> {
 .agree__text {
   flex: 1;
   color: var(--color-text-primary);
+  font-size: var(--font-caption);
+  line-height: 1.7;
+}
+
+.agree__plain {
+  color: var(--color-text-primary);
+  font-size: var(--font-caption);
+}
+
+/* 链接色主色在粉彩底上实测 5.54:1，满足正文对比度要求 */
+.agree__link {
+  color: var(--color-primary);
   font-size: var(--font-caption);
 }
 </style>

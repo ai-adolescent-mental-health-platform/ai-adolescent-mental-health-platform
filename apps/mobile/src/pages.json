@@ -35,6 +35,72 @@
       "style": {
         "navigationBarTitleText": "忘记密码"
       }
+    },
+    {
+      "path": "pages/me/info/index",
+      "style": {
+        "navigationBarTitleText": "个人信息"
+      }
+    },
+    {
+      "path": "pages/me/security/index",
+      "style": {
+        "navigationBarTitleText": "账号安全"
+      }
+    },
+    {
+      "path": "pages/me/privacy/index",
+      "style": {
+        "navigationBarTitleText": "隐私设置"
+      }
+    },
+    {
+      "path": "pages/legal/index",
+      "style": {
+        "navigationBarTitleText": "协议与政策"
+      }
+    },
+    {
+      "path": "pages/me/messages/index",
+      "style": {
+        "navigationBarTitleText": "我的消息"
+      }
+    },
+    {
+      "path": "pages/me/favorites/index",
+      "style": {
+        "navigationBarTitleText": "我的收藏"
+      }
+    },
+    {
+      "path": "pages/me/likes/index",
+      "style": {
+        "navigationBarTitleText": "我的点赞"
+      }
+    },
+    {
+      "path": "pages/me/follow/index",
+      "style": {
+        "navigationBarTitleText": "我的关注"
+      }
+    },
+    {
+      "path": "pages/me/articles/index",
+      "style": {
+        "navigationBarTitleText": "我的文章"
+      }
+    },
+    {
+      "path": "pages/me/publish/index",
+      "style": {
+        "navigationBarTitleText": "发布文章"
+      }
+    },
+    {
+      "path": "pages/me/feedback/index",
+      "style": {
+        "navigationBarTitleText": "意见反馈"
+      }
     }
   ],
   "globalStyle": {

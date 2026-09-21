@@ -12,7 +12,8 @@
   代价是多端编译配置的学习成本
 - 交付目标端：**App（Android / iOS）**，H5 仅用于本地预览
 - 当前进度：工程骨架 + 会话存储 + 路由守卫 + 基础 UI 组件最小集 + 统一 api 层（`src/lib/api.ts`）
-  + 登录 / 注册 / 找回密码 / 个人中心会话收口（issue #33）。**真实后端联调与 App 端真机验证均未进行**
+  + 登录 / 注册 / 找回密码（#33）+ 个人信息与设置（#34）+ 我的消息与互动（#35）。
+  **真实后端联调与 App 端真机验证均未进行**
 
 ## 二、目录结构
 
@@ -31,15 +32,19 @@ apps/mobile/
     │   ├── theme.css           # 主题变量层：唯一色值来源，含实测对比度
     │   └── layout.css          # 跨页共享布局类，不含色值
     ├── lib/
-    │   ├── api.ts              # 统一 api 层：页面唯一的请求出口（含 adapter 两处断言，见文件内注释）
-    │   ├── session.ts          # 会话四个操作（uni 存储）
+    │   ├── api.ts              # 统一 api 层：页面唯一的请求出口（含 adapter 两处断言与上传封装）
+    │   ├── session.ts          # 会话四个操作 + updateStoredUser（uni 存储）
     │   ├── validation.ts       # 表单校验（正则对齐后端 RegexConstant）+ 密码强度
+    │   ├── use-paged-list.ts   # 分页列表状态（所有列表页共用，见第四节第 8 条）
     │   └── safe-redirect.ts    # 登录回跳目标校验
     ├── router/
     │   ├── routes.ts           # 路由表（决定哪些页面需要登录）
     │   └── guard.ts            # 全局导航拦截 + 页面级兜底
-    ├── components/             # MButton / MInput / MCard / MNavBar
-    └── pages/                  # home / consultation / me / login / register / forgot-password
+    ├── config/
+    │   └── legal.ts            # 协议与政策正文（后端无对应接口，故用配置文件承载）
+    ├── components/             # MButton / MInput / MCard / MNavBar / MListState / MInteractionList
+    └── pages/                  # home / consultation / me / login / register / forgot-password / legal
+                                # me 下另有：info security privacy messages favorites likes follow articles publish feedback
 ```
 
 ## 三、命令
@@ -78,8 +83,18 @@ H5 预览跑通不代表 App 端可用（设计文档 6.1）。
    适用范围：**全部 tabBar 页面**，即 `src/pages.json` 的 `tabBar.list` 里的
    `pages/home/index`、`pages/consultation/index`、`pages/me/index` 三个页面。
    非 tab 页面按普通页面处理，`onLoad` 取数即可。新增 tab 页时必须遵守本条。
-8. **不跨 app 复制源文件**（根 AGENTS.md 规则 3）。
-9. **文档不写 emoji**。
+8. **列表页一律用 `src/lib/use-paged-list.ts` + `src/components/MListState.vue`，不要另写一套分页**。
+   原因：分页语义（首屏加载、加载更多、`current`/`pages` 游标、末尾判定、失败时清空列表并复位游标、
+   防重复追加）一旦分散到各页面，就会变成多份各自为政的实现——改一处漏一处，而「分页是否正确」
+   恰恰是最难靠肉眼发现的问题。收在一处后，页面只负责渲染条目与注入取数函数。
+   适用范围：**所有带分页的列表页**（含「加载更多」形态的滚动列表）。
+   - 条目结构相同、仅取数不同的列表，把渲染也收进共用组件（参考 `MInteractionList.vue` 收收藏与点赞）；
+   - 静态内容的多段渲染（如 `pages/legal/index.vue` 按章节 v-for）不属于分页列表，不适用本条；
+   - 单个对象取数（如个人中心的 `getUserInfo`）不是列表，不适用本条。
+   - **当前状态：全部列表页均已遵循**（`messages` / `favorites` / `likes` / `follow` / `articles` / `feedback`）。
+     无遗留未遵循的列表页。新增列表页时必须遵守本条。
+9. **不跨 app 复制源文件**（根 AGENTS.md 规则 3）。
+10. **文档不写 emoji**。
 
 ## 五、已知坑（均在本工作区实测）
 

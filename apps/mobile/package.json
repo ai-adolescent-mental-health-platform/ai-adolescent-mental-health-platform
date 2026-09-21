@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@ai-adolescent-mental-health/api-client": "workspace:*",
+    "@ai-adolescent-mental-health/domain": "workspace:*",
     "@dcloudio/uni-app": "3.0.0-5020620260917001",
     "@dcloudio/uni-app-plus": "3.0.0-5020620260917001",
     "@dcloudio/uni-components": "3.0.0-5020620260917001",

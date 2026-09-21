@@ -61,6 +61,152 @@
   font-size: var(--font-caption);
 }
 
+/* 单选型选项（如性别）：选中态用主色描边 + 粉彩底，文字始终为深色 */
+.m-choice-row {
+  display: flex;
+  gap: 16rpx;
+}
+
+.m-choice {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 76rpx;
+  border: 2rpx solid var(--color-border);
+  border-radius: var(--radius-control);
+  background-color: var(--color-surface);
+}
+
+.m-choice--active {
+  border-color: var(--color-primary);
+  background-color: var(--color-surface-muted);
+}
+
+.m-choice__label {
+  color: var(--color-text-secondary);
+  font-size: var(--font-body);
+}
+
+.m-choice--active .m-choice__label {
+  color: var(--color-primary);
+}
+
+/* 开关：轨道用 border-control（关）/ primary（开），白色滑块在两者上均 >= 3:1 */
+.m-switch {
+  position: relative;
+  width: 88rpx;
+  height: 48rpx;
+  border-radius: 999rpx;
+  background-color: var(--color-border-control);
+}
+
+.m-switch--on {
+  background-color: var(--color-primary);
+}
+
+.m-switch__knob {
+  position: absolute;
+  top: 4rpx;
+  left: 4rpx;
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  background-color: var(--color-surface);
+}
+
+.m-switch--on .m-switch__knob {
+  left: 44rpx;
+}
+
+/* 可点击的设置行：左文案 + 右控件/箭头 */
+.m-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  padding: 24rpx 0;
+  border-bottom: 2rpx solid var(--color-border);
+}
+
+.m-entry__label {
+  color: var(--color-text-primary);
+  font-size: var(--font-body);
+}
+
+.m-entry__value {
+  color: var(--color-text-secondary);
+  font-size: var(--font-caption);
+}
+
+/* 卡片内最后一行不再画分隔线 */
+.m-entry--last {
+  border-bottom: none;
+}
+
+/* 列表条目（站内信 / 收藏 / 点赞 / 关注 / 文章 / 反馈共用） */
+.m-item {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+  padding: 24rpx 0;
+  border-bottom: 2rpx solid var(--color-border);
+}
+
+.m-item--last {
+  border-bottom: none;
+}
+
+.m-item__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.m-item__title {
+  flex: 1;
+  color: var(--color-text-primary);
+  font-size: var(--font-body);
+  line-height: 1.5;
+}
+
+.m-item__body {
+  color: var(--color-text-secondary);
+  font-size: var(--font-caption);
+  line-height: 1.7;
+}
+
+.m-item__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  color: var(--color-text-secondary);
+  font-size: var(--font-caption);
+}
+
+.m-item__actions {
+  display: flex;
+  gap: 16rpx;
+  padding-top: 8rpx;
+}
+
+/* 未读圆点：非文本指示，用主色，与卡片白底对比 6.44:1 */
+.m-dot {
+  flex: none;
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background-color: var(--color-primary);
+}
+
+/* 列表容器：去掉卡片内边距带来的重复分隔线 */
+.m-list {
+  display: flex;
+  flex-direction: column;
+}
+
 /* 输入框 + 右侧动作按钮（获取验证码）的横向布局 */
 .m-code-row {
   display: flex;

@@ -72,3 +72,14 @@ export function clearSession(): void {
 export function isLoggedIn(): boolean {
   return getToken() !== null;
 }
+
+/**
+ * 就地更新已存会话中的用户字段（如资料保存后同步昵称/头像）。
+ *
+ * 只做浅合并，不触碰 token；token 不存在时不做任何事，避免在未登录状态下凭空造出会话。
+ */
+export function updateStoredUser(patch: Record<string, unknown>): void {
+  if (!getToken()) return;
+  const current = getStoredUser() ?? {};
+  uni.setStorageSync(USER_KEY, JSON.stringify({ ...current, ...patch }));
+}
