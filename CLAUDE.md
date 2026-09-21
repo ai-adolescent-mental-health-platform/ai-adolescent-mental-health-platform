@@ -9,6 +9,8 @@
 | `apps/backend` | Spring Boot 3.5.9 / Java 17 | 8080 | 后端 API，所有端共享 |
 | `apps/web-client` | Next.js 16 / React 19 / Tailwind 4 | **3300** | 青少年/家长用户端，**pouf 黏土设计** |
 | `apps/admin-portal` | Next.js 16 / React 19 | **3101** | 运营/心理咨询师管理端 |
+| `apps/mobile` | uni-app CLI(vite) / Vue 3 | **3200** | 手机端 App（H5 仅本地预览），绿色基调 |
+| `apps/parent-portal` | 规划中 | 待定 | 家长端，空壳未开工 |
 
 建库 SQL 在 `apps/backend/sql/`（`schema.sql` 全量表结构 + 补丁文件 + 字典种子数据），增量与运维脚本在 `infra/sql/`。
 

@@ -1,5 +1,28 @@
 {
   "name": "@ai-adolescent-mental-health/mobile",
   "version": "0.1.0",
-  "private": true
+  "private": true,
+  "scripts": {
+    "dev:h5": "uni",
+    "dev:app": "uni -p app",
+    "build:h5": "uni build",
+    "build:app": "uni build -p app",
+    "typecheck": "vue-tsc --noEmit",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\""
+  },
+  "dependencies": {
+    "@dcloudio/uni-app": "3.0.0-5020620260917001",
+    "@dcloudio/uni-app-plus": "3.0.0-5020620260917001",
+    "@dcloudio/uni-components": "3.0.0-5020620260917001",
+    "@dcloudio/uni-h5": "3.0.0-5020620260917001",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@dcloudio/types": "3.4.31",
+    "@dcloudio/uni-cli-shared": "3.0.0-5020620260917001",
+    "@dcloudio/vite-plugin-uni": "3.0.0-5020620260917001",
+    "typescript": "^5",
+    "vite": "8.0.16",
+    "vue-tsc": "^3.3.11"
+  }
 }

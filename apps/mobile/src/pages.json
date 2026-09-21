@@ -1,0 +1,60 @@
+{
+  "pages": [
+    {
+      "path": "pages/home/index",
+      "style": {
+        "navigationBarTitleText": "问答"
+      }
+    },
+    {
+      "path": "pages/consultation/index",
+      "style": {
+        "navigationBarTitleText": "心理咨询"
+      }
+    },
+    {
+      "path": "pages/me/index",
+      "style": {
+        "navigationBarTitleText": "个人中心"
+      }
+    },
+    {
+      "path": "pages/login/index",
+      "style": {
+        "navigationBarTitleText": "登录"
+      }
+    },
+    {
+      "path": "pages/register/index",
+      "style": {
+        "navigationBarTitleText": "注册"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationStyle": "custom",
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "心愈智联",
+    "backgroundColor": "#F3F7F4"
+  },
+  "tabBar": {
+    "color": "#4C6156",
+    "selectedColor": "#1F6B4A",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/home/index",
+        "text": "问答"
+      },
+      {
+        "pagePath": "pages/consultation/index",
+        "text": "心理咨询"
+      },
+      {
+        "pagePath": "pages/me/index",
+        "text": "我的"
+      }
+    ]
+  }
+}

@@ -1,0 +1,67 @@
+/*
+ * 手机端主题变量层（唯一色值来源）
+ *
+ * 硬约束（设计文档第 9 节）：
+ * 1. 正文文本与背景对比度不低于 4.5:1
+ * 2. 粉彩填充上禁止使用白字
+ * 3. 组件内禁止写死色值，一律引用本文件的变量
+ *
+ * 下列对比度为按 WCAG 2.1 相对亮度公式实测所得（非估算），改色时必须重算：
+ *   text-primary   #16241D on surface  #FFFFFF = 16.10:1
+ *   text-primary   #16241D on bg-page  #F3F7F4 = 14.89:1
+ *   text-secondary #4C6156 on surface  #FFFFFF =  6.66:1
+ *   text-secondary #4C6156 on bg-page  #F3F7F4 =  6.16:1
+ *   primary        #1F6B4A on surface  #FFFFFF =  6.44:1
+ *   primary        #1F6B4A on bg-page  #F3F7F4 =  5.96:1
+ *   on-primary     #FFFFFF on primary  #1F6B4A =  6.44:1
+ *   on-primary     #FFFFFF on primary-strong #17543A = 8.88:1
+ *   on-danger      #FFFFFF on danger   #A32017 =  7.56:1
+ *   text-primary   #16241D on surface-muted（粉彩）#E4F1E8 = 13.84:1
+ *   text-secondary #4C6156 on surface-muted（粉彩）#E4F1E8 =  5.73:1
+ *   控件边框 border-control #6E8878 on #FFFFFF = 3.85:1（WCAG 1.4.11 要求 >= 3:1）
+ *
+ * 粉彩底 surface-muted 只允许搭配 text-primary / text-secondary（深色字），
+ * 禁止搭配 on-primary（白字）——白字压粉彩在 web-client 实测仅 1.25:1 至 1.99:1。
+ */
+
+:root,
+page {
+  /* 背景与容器 */
+  --color-bg-page: #f3f7f4;
+  --color-surface: #ffffff;
+  /* 粉彩填充：仅限深色文字 */
+  --color-surface-muted: #e4f1e8;
+
+  /* 文字 */
+  --color-text-primary: #16241d;
+  --color-text-secondary: #4c6156;
+
+  /* 分隔线与边框 */
+  /* border 仅用于装饰性分隔，不承担控件边界职责 */
+  --color-border: #d5e2d9;
+  /* border-control 用于输入框等可交互控件边界（>= 3:1） */
+  --color-border-control: #6e8878;
+
+  /* 品牌主色（绿色基调） */
+  --color-primary: #1f6b4a;
+  --color-primary-strong: #17543a;
+  --color-on-primary: #ffffff;
+
+  /* 状态色 */
+  --color-danger: #a32017;
+  --color-on-danger: #ffffff;
+
+  /* 尺寸与节奏 */
+  --radius-card: 16rpx;
+  --radius-control: 12rpx;
+  --space-page: 32rpx;
+  --space-gap: 24rpx;
+
+  /* 字号 */
+  --font-body: 30rpx;
+  --font-caption: 24rpx;
+  --font-title: 36rpx;
+
+  /* 层叠 */
+  --z-navbar: 100;
+}

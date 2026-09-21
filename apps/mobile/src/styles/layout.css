@@ -1,0 +1,56 @@
+/*
+ * 共享布局类。
+ *
+ * 只放跨页面复用的布局原语（页面骨架、纵向间距、次要文字），
+ * 不与 theme.css 的变量层混在一起：变量层是唯一色值来源，本文件不定义任何色值。
+ */
+
+.m-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--color-bg-page);
+}
+
+.m-page__body {
+  flex: 1;
+  padding: var(--space-page);
+}
+
+.m-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-gap);
+}
+
+.m-text-primary {
+  color: var(--color-text-primary);
+  font-size: var(--font-body);
+}
+
+.m-text-secondary {
+  color: var(--color-text-secondary);
+  font-size: var(--font-caption);
+}
+
+.m-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  margin-top: var(--space-gap);
+}
+
+.m-field {
+  display: flex;
+  justify-content: space-between;
+  gap: 16rpx;
+  font-size: var(--font-body);
+}
+
+.m-field__label {
+  color: var(--color-text-secondary);
+}
+
+.m-field__value {
+  color: var(--color-text-primary);
+}
