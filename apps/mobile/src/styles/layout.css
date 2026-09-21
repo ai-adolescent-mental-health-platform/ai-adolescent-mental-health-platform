@@ -207,6 +207,16 @@
   flex-direction: column;
 }
 
+/* 状态标签：粉彩底 + 深色字（对比度见 theme.css 的 text-primary 于 surface-muted 13.84:1） */
+.m-item__tag {
+  flex: none;
+  padding: 4rpx 16rpx;
+  border-radius: 999rpx;
+  background-color: var(--color-surface-muted);
+  color: var(--color-text-primary);
+  font-size: var(--font-caption);
+}
+
 /* 输入框 + 右侧动作按钮（获取验证码）的横向布局 */
 .m-code-row {
   display: flex;

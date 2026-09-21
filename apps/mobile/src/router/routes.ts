@@ -35,6 +35,8 @@ export const ME_FOLLOW_PAGE = "/pages/me/follow/index";
 export const ME_ARTICLES_PAGE = "/pages/me/articles/index";
 export const ME_PUBLISH_PAGE = "/pages/me/publish/index";
 export const ME_FEEDBACK_PAGE = "/pages/me/feedback/index";
+export const ME_APPOINTMENTS_PAGE = "/pages/me/appointments/index";
+export const ME_ORDERS_PAGE = "/pages/me/orders/index";
 export const LEGAL_PAGE = "/pages/legal/index";
 
 export const ROUTES: RouteRule[] = [
@@ -51,6 +53,8 @@ export const ROUTES: RouteRule[] = [
   { path: ME_ARTICLES_PAGE, title: "我的文章", requiresAuth: true },
   { path: ME_PUBLISH_PAGE, title: "发布文章", requiresAuth: true },
   { path: ME_FEEDBACK_PAGE, title: "意见反馈", requiresAuth: true },
+  { path: ME_APPOINTMENTS_PAGE, title: "预约记录", requiresAuth: true },
+  { path: ME_ORDERS_PAGE, title: "咨询订单", requiresAuth: true },
   { path: LOGIN_PAGE, title: "登录", requiresAuth: false },
   { path: REGISTER_PAGE, title: "注册", requiresAuth: false },
   { path: FORGOT_PASSWORD_PAGE, title: "忘记密码", requiresAuth: false },

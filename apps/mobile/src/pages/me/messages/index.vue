@@ -11,7 +11,7 @@
  * 非 tab 页，按约定用 onLoad 取数。
  */
 
-import { onLoad } from "@dcloudio/uni-app";
+import { onLoad, onUnload } from "@dcloudio/uni-app";
 import { ref } from "vue";
 import MButton from "@/components/MButton.vue";
 import MCard from "@/components/MCard.vue";
@@ -53,7 +53,7 @@ function mapMessage(raw: unknown): MessageItem {
   };
 }
 
-const { items, loading, loadingMore, error, total, hasMore, isEmpty, loadFirstPage, loadMore } =
+const { items, loading, loadingMore, error, total, hasMore, isEmpty, loadFirstPage, loadMore, dispose } =
   usePagedList<MessageItem>(
     async (page, size) => {
       const result = await api.message.list({ page, size });
@@ -61,6 +61,11 @@ const { items, loading, loadingMore, error, total, hasMore, isEmpty, loadFirstPa
     },
     { size: 10, fallbackError: "消息加载失败" },
   );
+
+onUnload(() => {
+  // 卸载时作废在飞请求（代际校验），避免响应回来后写已销毁页面的状态。
+  dispose();
+});
 
 const unread = ref(0);
 const unreadLoaded = ref(false);

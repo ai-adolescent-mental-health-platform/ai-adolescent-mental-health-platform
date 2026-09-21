@@ -19,6 +19,7 @@ import { ensureAuthenticated } from "@/router/guard";
 import {
   LEGAL_PAGE,
   LOGIN_PAGE,
+  ME_APPOINTMENTS_PAGE,
   ME_ARTICLES_PAGE,
   ME_FAVORITES_PAGE,
   ME_FEEDBACK_PAGE,
@@ -26,6 +27,7 @@ import {
   ME_INFO_PAGE,
   ME_LIKES_PAGE,
   ME_MESSAGES_PAGE,
+  ME_ORDERS_PAGE,
   ME_PRIVACY_PAGE,
   ME_PUBLISH_PAGE,
   ME_SECURITY_PAGE,
@@ -144,6 +146,14 @@ function goPublish(): void {
 function goFeedback(): void {
   uni.navigateTo({ url: ME_FEEDBACK_PAGE });
 }
+
+function goAppointments(): void {
+  uni.navigateTo({ url: ME_APPOINTMENTS_PAGE });
+}
+
+function goOrders(): void {
+  uni.navigateTo({ url: ME_ORDERS_PAGE });
+}
 </script>
 
 <template>
@@ -178,6 +188,17 @@ function goFeedback(): void {
         </MCard>
 
         <text v-if="notice" class="m-error">{{ notice }}</text>
+
+        <MCard title="我的咨询与订单">
+          <view class="m-entry" @tap="goAppointments">
+            <text class="m-entry__label">预约记录</text>
+            <text class="m-entry__value">按预约状态查看</text>
+          </view>
+          <view class="m-entry m-entry--last" @tap="goOrders">
+            <text class="m-entry__label">咨询订单</text>
+            <text class="m-entry__value">订单号与支付状态</text>
+          </view>
+        </MCard>
 
         <MCard title="我的互动">
           <view class="m-entry" @tap="goMessages">

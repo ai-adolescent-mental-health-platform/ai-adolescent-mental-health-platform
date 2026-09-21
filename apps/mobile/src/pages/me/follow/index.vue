@@ -11,7 +11,7 @@
  */
 
 import { computed, ref } from "vue";
-import { onLoad } from "@dcloudio/uni-app";
+import { onLoad, onUnload } from "@dcloudio/uni-app";
 import type { FollowUser } from "@ai-adolescent-mental-health/domain";
 import MButton from "@/components/MButton.vue";
 import MCard from "@/components/MCard.vue";
@@ -42,6 +42,12 @@ const followers = usePagedList<FollowUser>(
   (page, size) => api.follow.myFollowers({ page, size }),
   { size: 20, fallbackError: "粉丝列表加载失败" },
 );
+
+onUnload(() => {
+  // 两个列表各自作废在飞请求：切走页面后返回的响应不再写状态。
+  followings.dispose();
+  followers.dispose();
+});
 
 /** 每个 tab 是否已经拉过首屏；切换时只对未拉取过的 tab 发请求。 */
 const started: Record<TabKey, boolean> = { followings: false, followers: false };

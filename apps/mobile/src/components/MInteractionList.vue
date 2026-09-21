@@ -9,7 +9,7 @@
  * onLoad 触发时子组件还没挂载，ref 为 null，那种写法会静默地什么都不做。
  */
 
-import { watch } from "vue";
+import { onUnmounted, watch } from "vue";
 import type { InteractionItem } from "@ai-adolescent-mental-health/domain";
 import MListState from "@/components/MListState.vue";
 import { usePagedList, type PageResultLike } from "@/lib/use-paged-list";
@@ -30,11 +30,16 @@ const props = withDefaults(
   },
 );
 
-const { items, loading, loadingMore, error, total, hasMore, isEmpty, loadFirstPage, loadMore } =
+const { items, loading, loadingMore, error, total, hasMore, isEmpty, loadFirstPage, loadMore, dispose } =
   usePagedList<InteractionItem>(props.fetcher, {
     size: 10,
     fallbackError: props.fallbackError,
   });
+
+onUnmounted(() => {
+  // 卸载时作废在飞请求：响应回来后不再写入已销毁组件的状态（代际校验）。
+  dispose();
+});
 
 watch(
   () => props.ready,

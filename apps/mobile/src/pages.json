@@ -101,6 +101,18 @@
       "style": {
         "navigationBarTitleText": "意见反馈"
       }
+    },
+    {
+      "path": "pages/me/appointments/index",
+      "style": {
+        "navigationBarTitleText": "预约记录"
+      }
+    },
+    {
+      "path": "pages/me/orders/index",
+      "style": {
+        "navigationBarTitleText": "咨询订单"
+      }
     }
   ],
   "globalStyle": {

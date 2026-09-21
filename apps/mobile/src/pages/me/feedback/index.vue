@@ -17,7 +17,7 @@
  * 非 tab 页，按约定用 onLoad 取数。
  */
 
-import { onLoad } from "@dcloudio/uni-app";
+import { onLoad, onUnload } from "@dcloudio/uni-app";
 import { ref } from "vue";
 import MButton from "@/components/MButton.vue";
 import MCard from "@/components/MCard.vue";
@@ -70,7 +70,7 @@ const submitting = ref(false);
 const formError = ref("");
 const notice = ref("");
 
-const { items, loading, loadingMore, error, total, hasMore, isEmpty, loadFirstPage, loadMore } =
+const { items, loading, loadingMore, error, total, hasMore, isEmpty, loadFirstPage, loadMore, dispose } =
   usePagedList<FeedbackItem>(
     async (page, size) => {
       const result = await httpClient.get<PageResultLike<unknown>>("/feedback/platform/my", {
@@ -80,6 +80,10 @@ const { items, loading, loadingMore, error, total, hasMore, isEmpty, loadFirstPa
     },
     { size: 10, fallbackError: "反馈记录加载失败" },
   );
+
+onUnload(() => {
+  dispose();
+});
 
 function describeError(err: unknown, fallback: string): string {
   return err instanceof Error && err.message ? err.message : fallback;

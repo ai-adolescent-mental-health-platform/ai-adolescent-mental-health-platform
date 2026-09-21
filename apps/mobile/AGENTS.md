@@ -12,7 +12,8 @@
   代价是多端编译配置的学习成本
 - 交付目标端：**App（Android / iOS）**，H5 仅用于本地预览
 - 当前进度：工程骨架 + 会话存储 + 路由守卫 + 基础 UI 组件最小集 + 统一 api 层（`src/lib/api.ts`）
-  + 登录 / 注册 / 找回密码（#33）+ 个人信息与设置（#34）+ 我的消息与互动（#35）。
+  + 登录 / 注册 / 找回密码（#33）+ 个人信息与设置（#34）+ 我的消息与互动（#35）
+  + 我的咨询与订单（#36，取数层 `src/lib/appointments.ts` 待菜单 2 复用）。
   **真实后端联调与 App 端真机验证均未进行**
 
 ## 二、目录结构
@@ -33,9 +34,10 @@ apps/mobile/
     │   └── layout.css          # 跨页共享布局类，不含色值
     ├── lib/
     │   ├── api.ts              # 统一 api 层：页面唯一的请求出口（含 adapter 两处断言与上传封装）
+    │   ├── appointments.ts     # 预约/订单取数与状态文案（**待 #38 菜单 2 复用，不要另写一套**）
     │   ├── session.ts          # 会话四个操作 + updateStoredUser（uni 存储）
     │   ├── validation.ts       # 表单校验（正则对齐后端 RegexConstant）+ 密码强度
-    │   ├── use-paged-list.ts   # 分页列表状态（所有列表页共用，见第四节第 8 条）
+    │   ├── use-paged-list.ts   # 分页列表状态 + 请求代际校验（所有列表页共用，见第四节第 8 条）
     │   └── safe-redirect.ts    # 登录回跳目标校验
     ├── router/
     │   ├── routes.ts           # 路由表（决定哪些页面需要登录）
@@ -44,7 +46,8 @@ apps/mobile/
     │   └── legal.ts            # 协议与政策正文（后端无对应接口，故用配置文件承载）
     ├── components/             # MButton / MInput / MCard / MNavBar / MListState / MInteractionList
     └── pages/                  # home / consultation / me / login / register / forgot-password / legal
-                                # me 下另有：info security privacy messages favorites likes follow articles publish feedback
+                                # me 下另有：info security privacy messages favorites likes follow
+                                #            articles publish feedback appointments orders
 ```
 
 ## 三、命令
@@ -91,8 +94,11 @@ H5 预览跑通不代表 App 端可用（设计文档 6.1）。
    - 条目结构相同、仅取数不同的列表，把渲染也收进共用组件（参考 `MInteractionList.vue` 收收藏与点赞）；
    - 静态内容的多段渲染（如 `pages/legal/index.vue` 按章节 v-for）不属于分页列表，不适用本条；
    - 单个对象取数（如个人中心的 `getUserInfo`）不是列表，不适用本条。
-   - **当前状态：全部列表页均已遵循**（`messages` / `favorites` / `likes` / `follow` / `articles` / `feedback`）。
-     无遗留未遵循的列表页。新增列表页时必须遵守本条。
+   - **当前状态：全部列表页均已遵循**（`messages` / `favorites` / `likes` / `follow` / `articles` /
+     `feedback` / `appointments` / `orders`）。无遗留未遵循的列表页。新增列表页时必须遵守本条。
+   - **换数据源（切筛选、切 tab、重新加载）必须调用 `loadFirstPage()`**：它会递增「请求代际」并作废在飞请求，
+     保证迟到的旧响应不会覆盖新数据；组件卸载时调用 `dispose()`。相关动机与边界见 `use-paged-list.ts` 注释——
+     它是客户端侧兜底，**不替代**取消链路（issue #32 遗留）。
 9. **不跨 app 复制源文件**（根 AGENTS.md 规则 3）。
 10. **文档不写 emoji**。
 
@@ -113,6 +119,14 @@ H5 预览跑通不代表 App 端可用（设计文档 6.1）。
   重复声明只会引入 `import.meta.url` 这类在 CJS 配置下不可用的写法。
 - `vue-tsc` 会把 `<input>` 解析成 DOM 的 input 元素类型而非 uni 组件，事件回调参数不要写 DOM 形状的类型，
   用 `unknown` 收窄（见 `MInput.vue`）。
+- **编辑 `src/` 下的文件时 dev server 可能崩溃**：报
+  `EBUSY: resource busy or locked, watch '...\.<file>.<pid>.<guid>.tmpdir\<file>.tmp'`。
+  原因是写入工具会先写临时目录再改名，vite 的文件监听正好扫到该临时文件（本工作区已复现 4 次）。
+  处置：删除残留的 `*.tmpdir` 后重启 dev server：
+  ```powershell
+  Get-ChildItem apps/mobile/src -Recurse -Force -Directory | Where-Object { $_.Name -like "*.tmpdir" } | Remove-Item -Recurse -Force
+  ```
+  **改代码时先把 dev server 停掉**，改完再启动，可以完全避开这个问题。
 - **回跳参数不要自己 `encodeURIComponent`**：uni-app 的 H5 路由在序列化 hash 时会再编码一次，
   先编码会得到 `redirect=%252Fpages%252Fme%252Findex` 这样的双重编码。会话内仍能解回正确路径，
   但**用户在该页刷新后回跳目标会丢失**（`safeRedirect` 判定 `%2Fpages/...` 不是合法应用内路径而退回首页）。

@@ -12,7 +12,7 @@
  * 非 tab 页，按约定用 onLoad 取数。
  */
 
-import { onLoad } from "@dcloudio/uni-app";
+import { onLoad, onUnload } from "@dcloudio/uni-app";
 import { ref } from "vue";
 import MButton from "@/components/MButton.vue";
 import MCard from "@/components/MCard.vue";
@@ -47,11 +47,15 @@ function statusLabel(status: number): string {
 
 const ready = ref(false);
 
-const { items, loading, loadingMore, error, total, hasMore, isEmpty, loadFirstPage, loadMore } =
+const { items, loading, loadingMore, error, total, hasMore, isEmpty, loadFirstPage, loadMore, dispose } =
   usePagedList<ArticleItem>(
     async (page, size) => api.content.myArticles({ page, size }),
     { size: 10, fallbackError: "文章加载失败" },
   );
+
+onUnload(() => {
+  dispose();
+});
 
 onLoad(() => {
   if (!ensureAuthenticated(ME_ARTICLES_PAGE)) return;
