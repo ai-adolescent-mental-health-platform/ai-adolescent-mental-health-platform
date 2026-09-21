@@ -24,7 +24,7 @@
     "@dcloudio/uni-cli-shared": "3.0.0-5020620260917001",
     "@dcloudio/vite-plugin-uni": "3.0.0-5020620260917001",
     "typescript": "^5",
-    "vite": "8.0.16",
+    "vite": "5.2.8",
     "vue-tsc": "^3.3.11"
   }
 }
