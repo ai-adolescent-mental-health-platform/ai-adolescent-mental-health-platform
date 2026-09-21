@@ -16,7 +16,7 @@
 | `apps/backend` | `@ai-adolescent-mental-health/backend` | Spring Boot 3.5.9 / Java 17 / Maven Wrapper | 8080 |
 | `apps/web-client` | `@ai-adolescent-mental-health/web-client` | Next.js 16 / React 19 / Tailwind CSS 4 | 3300 |
 | `apps/admin-portal` | `@ai-adolescent-mental-health/admin-portal` | Next.js 16 / React 19 / TypeScript | 3101 |
-| `apps/mobile` | `@ai-adolescent-mental-health/mobile` | 规划中（拟 uniapp） | — |
+| `apps/mobile` | `@ai-adolescent-mental-health/mobile` | uni-app CLI(vite) / Vue 3 / TypeScript | 3200（H5 预览；App 端需 HBuilderX） |
 | `apps/parent-portal` | `@ai-adolescent-mental-health/parent-portal` | 规划中 | — |
 
 工作区通配见 [pnpm-workspace.yaml](pnpm-workspace.yaml)（`apps/*`）；共享 SQL 在 `infra/sql/`。
@@ -35,6 +35,7 @@ pnpm clean          # turbo run clean + 清理 .turbo
 pnpm dev:backend        # 只起后端 (8080)
 pnpm dev:web-client     # 只起用户端 (3300)
 pnpm --filter @ai-adolescent-mental-health/admin-portal dev   # 管理端 (3101)
+pnpm --filter @ai-adolescent-mental-health/mobile dev:h5      # 手机端 H5 预览 (3200)
 pnpm test:backend       # 只跑后端测试
 ```
 
@@ -86,3 +87,4 @@ Turbo 管线（[turbo.json](turbo.json)）：`build` 依赖 `^build`；`test` �
 - [apps/backend/AGENTS.md](apps/backend/AGENTS.md)
 - [apps/web-client/AGENTS.md](apps/web-client/AGENTS.md) — 用户端 pouf 页面设计规范见 [apps/web-client/design.md](apps/web-client/design.md)
 - [apps/admin-portal/AGENTS.md](apps/admin-portal/AGENTS.md)
+- [apps/mobile/AGENTS.md](apps/mobile/AGENTS.md) — 手机端 uni-app 工程约束与已知坑
