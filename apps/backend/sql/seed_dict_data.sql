@@ -50,3 +50,22 @@ INSERT INTO `article_tag` (`name`, `code`, `sort_order`, `status`) VALUES
 ('科普', 'SCIENCE', 1, 1),
 ('案例', 'CASE', 2, 1)
 ON DUPLICATE KEY UPDATE `name` = VALUES(`name`);
+
+-- 签到情绪标签（每日签到模块，10 个预置标签）
+-- polarity 为情绪极性(-2~2)；tone 只取 pouf 六色之一；uk_code 保证幂等
+INSERT INTO `checkin_mood_tag` (`name`, `code`, `icon`, `tone`, `polarity`, `sort_order`) VALUES
+('开心', 'HAPPY', 'smile', 'yellow', 2, 1),
+('有动力', 'MOTIVATED', 'zap', 'mint', 2, 2),
+('平静', 'CALM', 'moon', 'mint', 1, 3),
+('期待', 'LOOKING_FORWARD', 'sparkles', 'blue', 1, 4),
+('一般', 'NEUTRAL', 'meh', 'purple', 0, 5),
+('疲惫', 'TIRED', 'battery-low', 'purple', -1, 6),
+('焦虑', 'ANXIOUS', 'wind', 'orange', -1, 7),
+('烦躁', 'IRRITABLE', 'flame', 'orange', -1, 8),
+('低落', 'DOWN', 'cloud-rain', 'blue', -2, 9),
+('孤独', 'LONELY', 'user-round', 'purple', -2, 10)
+ON DUPLICATE KEY UPDATE
+    `name` = VALUES(`name`),
+    `icon` = VALUES(`icon`),
+    `tone` = VALUES(`tone`),
+    `polarity` = VALUES(`polarity`);

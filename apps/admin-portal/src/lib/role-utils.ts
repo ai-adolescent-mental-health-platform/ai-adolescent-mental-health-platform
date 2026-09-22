@@ -26,6 +26,7 @@ export interface MenuItem {
 export const SUPER_ADMIN_MENU: MenuItem[] = [
   { path: "/admin/dashboard", label: "工作概览", icon: "DataBoard" },
   { path: "/admin/users", label: "用户管理", icon: "UserFilled" },
+  { path: "/admin/alerts", label: "预警管理", icon: "Warning" },
   { path: "/admin/psychologist", label: "心理咨询师管理", icon: "Service" },
   { path: "/admin/psychologist-fields", label: "擅长领域管理", icon: "Collection" },
   { path: "/admin/psychologist-qualifications", label: "资质管理", icon: "Medal" },

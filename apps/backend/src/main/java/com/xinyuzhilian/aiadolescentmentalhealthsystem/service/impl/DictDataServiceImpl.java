@@ -1,7 +1,9 @@
 package com.xinyuzhilian.aiadolescentmentalhealthsystem.service.impl;
 
+import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.pojo.CheckinMoodTag;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.pojo.ConsultationField;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.pojo.PsychologistQualification;
+import com.xinyuzhilian.aiadolescentmentalhealthsystem.mapper.CheckinMoodTagMapper;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.mapper.ConsultationFieldMapper;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.mapper.PsychologistQualificationMapper;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.service.IDictDataService;
@@ -16,7 +18,7 @@ import java.util.List;
 
 /**
  * 字典数据服务实现类
- * 提供咨询领域、资质类型等字典数据的加载和查询功能
+ * 提供咨询领域、资质类型、签到情绪标签等字典数据的加载和查询功能
  *
  * @author AI Developer
  * @since 2026-04-14
@@ -27,7 +29,8 @@ public class DictDataServiceImpl implements IDictDataService, ApplicationRunner 
 
     private final ConsultationFieldMapper consultationFieldMapper;
     private final PsychologistQualificationMapper qualificationMapper;
-    
+    private final CheckinMoodTagMapper checkinMoodTagMapper;
+
     @Autowired(required = false)
     private RedisTemplate<String, Object> redisTemplate;
 
@@ -36,11 +39,14 @@ public class DictDataServiceImpl implements IDictDataService, ApplicationRunner 
      */
     private static final String CACHE_KEY_CONSULTATION_FIELDS = "dict:consultation_fields";
     private static final String CACHE_KEY_QUALIFICATIONS = "dict:qualifications";
+    private static final String CACHE_KEY_MOOD_TAGS = "dict:checkin_mood_tags";
 
     public DictDataServiceImpl(ConsultationFieldMapper consultationFieldMapper,
-                               PsychologistQualificationMapper qualificationMapper) {
+                               PsychologistQualificationMapper qualificationMapper,
+                               CheckinMoodTagMapper checkinMoodTagMapper) {
         this.consultationFieldMapper = consultationFieldMapper;
         this.qualificationMapper = qualificationMapper;
+        this.checkinMoodTagMapper = checkinMoodTagMapper;
     }
 
     @Override
@@ -130,6 +136,40 @@ public class DictDataServiceImpl implements IDictDataService, ApplicationRunner 
     }
 
     @Override
+    @SuppressWarnings("unchecked")
+    public List<CheckinMoodTag> getAllMoodTags() {
+        // 尝试从Redis获取
+        if (isRedisAvailable()) {
+            try {
+                Object cached = redisTemplate.opsForValue().get(CACHE_KEY_MOOD_TAGS);
+                if (cached != null) {
+                    return (List<CheckinMoodTag>) cached;
+                }
+            } catch (Exception e) {
+                log.warn("从Redis获取签到情绪标签失败", e);
+            }
+        }
+
+        // 从数据库获取
+        List<CheckinMoodTag> tags = checkinMoodTagMapper.selectList(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<CheckinMoodTag>()
+                        .eq(CheckinMoodTag::getStatus, 1)
+                        .orderByAsc(CheckinMoodTag::getSortOrder)
+        );
+
+        // 缓存到Redis
+        if (isRedisAvailable()) {
+            try {
+                redisTemplate.opsForValue().set(CACHE_KEY_MOOD_TAGS, tags);
+            } catch (Exception e) {
+                log.warn("缓存签到情绪标签到Redis失败", e);
+            }
+        }
+
+        return tags;
+    }
+
+    @Override
     public ConsultationField getConsultationFieldById(Integer id) {
         List<ConsultationField> fields = getAllConsultationFields();
         return fields.stream()
@@ -143,6 +183,15 @@ public class DictDataServiceImpl implements IDictDataService, ApplicationRunner 
         List<PsychologistQualification> qualifications = getAllQualifications();
         return qualifications.stream()
                 .filter(q -> q.getId().equals(id))
+                .findFirst()
+                .orElse(null);
+    }
+
+    @Override
+    public CheckinMoodTag getMoodTagById(Integer id) {
+        List<CheckinMoodTag> tags = getAllMoodTags();
+        return tags.stream()
+                .filter(t -> t.getId().equals(id))
                 .findFirst()
                 .orElse(null);
     }
@@ -176,6 +225,18 @@ public class DictDataServiceImpl implements IDictDataService, ApplicationRunner 
             redisTemplate.opsForValue().set(CACHE_KEY_QUALIFICATIONS, qualifications);
         } catch (Exception e) {
             log.warn("刷新资质类型缓存失败", e);
+        }
+
+        // 刷新签到情绪标签
+        List<CheckinMoodTag> moodTags = checkinMoodTagMapper.selectList(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<CheckinMoodTag>()
+                        .eq(CheckinMoodTag::getStatus, 1)
+                        .orderByAsc(CheckinMoodTag::getSortOrder)
+        );
+        try {
+            redisTemplate.opsForValue().set(CACHE_KEY_MOOD_TAGS, moodTags);
+        } catch (Exception e) {
+            log.warn("刷新签到情绪标签缓存失败", e);
         }
     }
 }

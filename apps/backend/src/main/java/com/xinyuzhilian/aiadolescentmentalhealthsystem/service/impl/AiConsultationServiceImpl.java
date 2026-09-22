@@ -40,6 +40,9 @@ public class AiConsultationServiceImpl implements IAiConsultationService {
     @Value("${dashscope.api.key}")
     private String apiKey;
 
+    @Value("${dashscope.api.chat-model}")
+    private String chatModel;
+
     private static final String DASHSCOPE_API_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
     private static final ExecutorService executor = Executors.newCachedThreadPool();
 
@@ -145,6 +148,7 @@ public class AiConsultationServiceImpl implements IAiConsultationService {
                 .last("LIMIT 20")); // Simple context window
 
         DashScopeRequest request = new DashScopeRequest();
+        request.setModel(chatModel);
         List<DashScopeRequest.DashScopeMessage> messages = new ArrayList<>();
         messages.add(new DashScopeRequest.DashScopeMessage("system", SYSTEM_PROMPT));
         

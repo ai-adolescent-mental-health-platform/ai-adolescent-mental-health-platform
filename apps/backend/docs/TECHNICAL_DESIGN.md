@@ -80,6 +80,8 @@
 *   **表名**: `crisis_alert` (危机警报)
     *   `id`, `user_id`, `trigger_msg_id`, `risk_level`, `status` (PENDING-待处理, PROCESSING-处理中, RESOLVED-已解决), `handler_id` (处理人ID), `create_time`
 
+> **更新（2026-09）**：本节 `crisis_alert` 命名已被签到预警模块的 `risk_alert` 表取代，见 `apps/backend/sql/schema_checkin.sql` 及「每日签到与情绪预警模块设计文档」第 5 节。`risk_alert` 采用 `source_type` / `source_id` 多源定位（`uk_source` 唯一键），支持签到、量表、小爱倾听等来源，`status` 枚举统一为 `0-待处置 / 1-处理中 / 2-已处置 / 3-已忽略`；`risk_level` 统一刻度为 `0-平稳 / 1-需要陪伴 / 2-危机`（与设计文档 5.1 对齐，不再使用 0-低 / 1-中 / 2-高 的旧表述）。
+
 #### 2.1.8 内容与课程 (Content)
 *   **表名**: `article` (文章)
     *   `id`, `title`, `content` (Rich Text), `type` (SCIENCE-科普, CASE-案例), `status` (PUBLISHED/DRAFT)

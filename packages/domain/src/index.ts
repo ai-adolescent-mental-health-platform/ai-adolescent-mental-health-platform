@@ -190,3 +190,63 @@ export type DashboardSnapshot = {
   assessmentProgress: number;
   recommendations: LibraryItem[];
 };
+
+export type CheckinMoodTag = {
+  id: number;
+  name: string;
+  code: string;
+  icon: string;
+  tone: string;
+  polarity: number;
+  sortOrder?: number;
+};
+
+export type CheckinRecord = {
+  id: number;
+  userId?: number;
+  checkinDate: string;
+  moodPolarity?: number;
+  diaryContent?: string;
+  contentLength?: number;
+  createTime?: string;
+  updateTime?: string;
+};
+
+export type CheckinAnalysis = {
+  id?: number;
+  checkinId?: number;
+  status?: number;
+  riskLevel?: number;
+  userFeedback?: string;
+  suggestion?: string;
+  riskReason?: string;
+  createTime?: string;
+};
+
+export type CheckinToday = {
+  checkin: CheckinRecord | null;
+  tags: CheckinMoodTag[];
+  analysis: CheckinAnalysis | null;
+};
+
+export type CheckinSubmitBody = {
+  tagIds: number[];
+  diaryContent?: string;
+};
+
+export type CheckinStats = {
+  continuousDays: number;
+  monthCount: number;
+  trend: Array<{ date: string; polarity: number | null }>;
+};
+
+export type CheckinHistoryItem = {
+  id: number;
+  checkinDate: string;
+  moodPolarity?: number;
+  diaryContent?: string;
+  tags: CheckinMoodTag[];
+  analysisStatus?: number;
+  riskLevel?: number;
+  createTime?: string;
+};

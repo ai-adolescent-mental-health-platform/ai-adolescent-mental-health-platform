@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { FileText, Heart, Star, ShoppingBag, Calendar, ArrowRight, Pencil } from "lucide-react";
+import { FileText, Heart, Star, ShoppingBag, Calendar, ArrowRight, Pencil, CalendarCheck } from "lucide-react";
 import { Skeleton } from "@/components/pouf/Skeleton";
 import { Button } from "@/components/pouf/Button";
 import { Badge } from "@/components/pouf/Badge";
@@ -54,7 +54,19 @@ export function MePage() {
       </p>
 
       {/* Quick action cards */}
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+        <Link href="/me/checkin">
+          <Card className="group cursor-pointer p-4 transition-all hover:-translate-y-0.5">
+            <div className="mb-3 inline-flex rounded-control bg-mint/20 p-2">
+              <CalendarCheck className="size-5 text-mint" />
+            </div>
+            <div className="text-lg font-bold text-ink">我的签到</div>
+            <div className="mt-1 flex items-center gap-1 text-xs text-muted/70 group-hover:text-purple">
+              每日打卡 <ArrowRight className="size-3 transition-transform group-hover:translate-x-1" />
+            </div>
+          </Card>
+        </Link>
+
         <Link href="/me/publish">
           <Card className="group cursor-pointer p-4 transition-all hover:-translate-y-0.5">
             <div className="mb-3 inline-flex rounded-control bg-purple/20 p-2">

@@ -10,6 +10,12 @@ import type {
   AssessmentRecord,
   AssessmentRiskLevel,
   AssessmentTemplate,
+  CheckinAnalysis,
+  CheckinHistoryItem,
+  CheckinMoodTag,
+  CheckinStats,
+  CheckinSubmitBody,
+  CheckinToday,
   ConsultationType,
   FollowUser,
   InteractionItem,
@@ -772,6 +778,16 @@ export function createApiClient(http: HttpClient) {
         }),
       addBookComment: (bookId: number, content: string) =>
         http.post<string>("/book/comment", { bookId, content }),
+    },
+    checkin: {
+      today: () => http.get<CheckinToday>("/checkin/today"),
+      submit: (body: CheckinSubmitBody) => http.post<CheckinToday>("/checkin", body),
+      update: (id: number, body: CheckinSubmitBody) => http.put<CheckinToday>(`/checkin/${id}`, body),
+      moodTags: () => http.get<CheckinMoodTag[]>("/checkin/mood-tags"),
+      analysis: (checkinId: number) => http.get<CheckinAnalysis>(`/checkin/analysis/${checkinId}`),
+      history: (params?: { page?: number; size?: number }) =>
+        http.get<PageResult<CheckinHistoryItem>>("/checkin/history", { query: { page: params?.page ?? 1, size: params?.size ?? 10 } }),
+      stats: () => http.get<CheckinStats>("/checkin/stats"),
     },
   };
 }
