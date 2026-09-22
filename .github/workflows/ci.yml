@@ -101,6 +101,7 @@ jobs:
           for sql_file in \
             apps/backend/sql/schema_email_bind.sql \
             apps/backend/sql/schema_xiaoai_usage.sql \
+            apps/backend/sql/schema_checkin.sql \
             apps/backend/sql/seed_dict_data.sql
           do
             if [ -f "$sql_file" ]; then
