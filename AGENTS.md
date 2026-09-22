@@ -16,10 +16,10 @@
 | `apps/backend` | `@ai-adolescent-mental-health/backend` | Spring Boot 3.5.9 / Java 17 / Maven Wrapper | 8080 |
 | `apps/web-client` | `@ai-adolescent-mental-health/web-client` | Next.js 16 / React 19 / Tailwind CSS 4 | 3300 |
 | `apps/admin-portal` | `@ai-adolescent-mental-health/admin-portal` | Next.js 16 / React 19 / TypeScript | 3101 |
-| `apps/mobile` | `@ai-adolescent-mental-health/mobile` | 规划中（拟 uniapp） | — |
-| `apps/parent-portal` | `@ai-adolescent-mental-health/parent-portal` | 规划中 | — |
+| `apps/mobile` | `@ai-adolescent-mental-health/mobile` | uniapp（设计已定稿，当前为空壳） | — |
+| `apps/parent-portal` | `@ai-adolescent-mental-health/parent-portal` | 待定（当前为空壳，未立项） | — |
 
-工作区通配见 [pnpm-workspace.yaml](pnpm-workspace.yaml)（`apps/*`）；共享 SQL 在 `infra/sql/`。
+工作区通配见 [pnpm-workspace.yaml](pnpm-workspace.yaml)（`apps/*`）。**建库 SQL 在 `apps/backend/sql/`**（`schema.sql` + `schema_<模块>.sql` + `seed_dict_data.sql`）；跨工作区的增量与运维脚本才放 `infra/sql/`。
 
 ## 三、命令速查
 
@@ -46,7 +46,7 @@ Turbo 管线（[turbo.json](turbo.json)）：`build` 依赖 `^build`；`test` �
 
 1. **不要修改 `pnpm-lock.yaml`**，除非用户明确要求升级/新增依赖。仓库由 corepack 固定 `pnpm 12.3.4`（根 `package.json` `packageManager` 已升级），锁文件为 pnpm 12 格式；pnpm 12 的构建脚本白名单走 `pnpm-workspace.yaml` 的 `allowBuilds`（未批准会拦截安装，报 approval 提示）。
 2. **不要擅自新增平行 AI 规约文件**（`CLAUDE.md`、`.cursorrules`、`.github/copilot-instructions.md` 等）；统一用 `AGENTS.md`。
-3. **不要跨 app 复制源文件**；各端独立演进，共享 SQL/常量放 `infra/`。
+3. **不要跨 app 复制源文件**；各端独立演进。**建库 SQL 放 `apps/backend/sql/`**，跨工作区的增量脚本与常量放 `infra/`。
 4. **修改根级配置先说明理由**：`turbo.json`、`pnpm-workspace.yaml`、根 `package.json`、`apps/backend/src/main/resources/application*.yml`。
 5. **不提交真实密钥或环境配置文件**；敏感项经 `${ENV_VAR}` 读取，本地可用 `apps/backend/.env`；不提交真实 `.env` 或 `application-dev/test/local.yml`。
 6. **工作区新增依赖**走对应子目录 `package.json` / `pom.xml` / `build.gradle.kts`，不塞根 `package.json`。
@@ -76,8 +76,9 @@ Turbo 管线（[turbo.json](turbo.json)）：`build` 依赖 `^build`；`test` �
 | `apps/web-client` | `pnpm --filter @ai-adolescent-mental-health/web-client typecheck` |
 | `apps/admin-portal` | `pnpm --filter @ai-adolescent-mental-health/admin-portal typecheck` |
 | 后端代码或 SQL | `pnpm test:backend` |
+| `packages/*`（共享包） | `pnpm --filter <包名> test && pnpm --filter <包名> typecheck`，并额外跑消费端的 typecheck 确认未破坏契约 |
 | 跨工作区 | `pnpm typecheck && pnpm test` |
-| 数据库 schema | 同步更新 `infra/sql/` 并在 PR 说明 |
+| 数据库 schema | 同步更新 `apps/backend/sql/` 并在 PR 说明 |
 
 ## 八、子工作区深入
 
@@ -86,3 +87,5 @@ Turbo 管线（[turbo.json](turbo.json)）：`build` 依赖 `^build`；`test` �
 - [apps/backend/AGENTS.md](apps/backend/AGENTS.md)
 - [apps/web-client/AGENTS.md](apps/web-client/AGENTS.md) — 用户端 pouf 页面设计规范见 [apps/web-client/design.md](apps/web-client/design.md)
 - [apps/admin-portal/AGENTS.md](apps/admin-portal/AGENTS.md)
+
+设计定稿与实施计划在 `docs/superpowers/`：`specs/` 放设计文档（自包含，可直接据此开工），`plans/` 放实施计划。
