@@ -838,5 +838,9 @@ export async function streamAiChat(
   }
 }
 
-export { createUniAdapter } from "./uni-adapter.js";
-export type { UniRequestLike, UniRequestOptions, UniRequestTask } from "./uni-adapter.js";
+// 注意：这里不能写成 "./uni-adapter.js"。本包是被 web-client / admin-portal 直接
+// 编译源码消费的（package.json exports 指向 src/index.ts + transpilePackages），
+// 而 Next 16 的 Turbopack 不做 TypeScript 的 .js → .ts 扩展名替换，
+// 写成 .js 会在构建期报 "Module not found: Can't resolve './uni-adapter.js'"。
+export { createUniAdapter } from "./uni-adapter";
+export type { UniRequestLike, UniRequestOptions, UniRequestTask } from "./uni-adapter";
