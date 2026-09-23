@@ -6,14 +6,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Bot, Calendar, ClipboardCheck, BookOpen, Heart, Sparkles,
-  ChevronRight, MessageCircle, ArrowRight, Sprout,
+  ChevronRight, MessageCircle, ArrowRight, Sprout, CalendarCheck,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/pouf/Card";
 import { Button } from "@/components/pouf/Button";
 import { Progress } from "@/components/pouf/Progress";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
-import type { Appointment, AssessmentRecord, LibraryItem } from "@/lib/types";
+import type { Appointment, AssessmentRecord, LibraryItem, CheckinToday } from "@/lib/types";
+import { CheckinDialog } from "@/components/checkin/checkin-dialog";
 
 const DEFAULT_QUOTES = [
   { content: "每一种情绪都值得被看见，每一个你都值得被温柔以待。", author: "心愈智联" },
@@ -73,6 +74,8 @@ export function HomePage() {
   const [latestAssessment, setLatestAssessment] = useState<AssessmentRecord | null>(null);
   const [latestAiReply, setLatestAiReply] = useState<string>("");
   const [recommendations, setRecommendations] = useState<LibraryItem[]>([]);
+  const [checkinToday, setCheckinToday] = useState<CheckinToday | null>(null);
+  const [checkinOpen, setCheckinOpen] = useState(false);
 
   // Quote rotation
   useEffect(() => {
@@ -129,6 +132,11 @@ export function HomePage() {
     fetchData();
   }, []);
 
+  // Checkin status
+  useEffect(() => {
+    api.checkin.today().then(setCheckinToday).catch(() => {});
+  }, []);
+
   const currentQuote = quotes[quoteIndex];
 
   return (
@@ -173,6 +181,38 @@ export function HomePage() {
                 · {currentQuote.author}
               </cite>
             )}
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* Checkin card — 三态：未签到 / 已签待补日记 / 已完成 */}
+      <section className="mb-10">
+        <Card className="overflow-hidden">
+          <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-4">
+              <span className="inline-grid size-12 shrink-0 place-items-center rounded-pill bg-mint tone-mint cushion-blob">
+                <CalendarCheck className="size-6 text-ink" />
+              </span>
+              <div>
+                <h3 className="font-black text-ink">
+                  {checkinToday?.checkin ? "今天已签到" : "今日签到"}
+                </h3>
+                <p className="mt-1 text-xs font-bold text-muted">
+                  {checkinToday?.checkin
+                    ? checkinToday.checkin.diaryContent
+                      ? "已完成记录与 AI 反馈"
+                      : "已打卡，还可以补写今天的事"
+                    : "花十几秒记录此刻的心情与状态"}
+                </p>
+              </div>
+            </div>
+            <Button tone="mint" variant="solid" size="sm" onClick={() => setCheckinOpen(true)}>
+              {checkinToday?.checkin
+                ? checkinToday.checkin.diaryContent
+                  ? "修改今天的内容"
+                  : "补写今天的事"
+                : "去签到"}
+            </Button>
           </CardContent>
         </Card>
       </section>
@@ -401,6 +441,12 @@ export function HomePage() {
         </div>
       </section>
 
+      <CheckinDialog
+        open={checkinOpen}
+        onOpenChange={setCheckinOpen}
+        existingId={checkinToday?.checkin?.id}
+        onDone={() => api.checkin.today().then(setCheckinToday).catch(() => {})}
+      />
     </div>
   );
 }

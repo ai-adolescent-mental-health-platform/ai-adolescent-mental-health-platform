@@ -5,7 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import {
   User, FileText, Lock, Star, ClipboardCheck, MessageSquare,
-  LogOut, Bell, Bookmark
+  LogOut, Bell, Bookmark, CalendarCheck
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/pouf/Avatar";
 import { Button } from "@/components/pouf/Button";
@@ -17,6 +17,7 @@ import type { UserProfile } from "@/lib/types";
 
 const MENU_ITEMS = [
   { href: "/me/info", icon: User, label: "个人信息中心" },
+  { href: "/me/checkin", icon: CalendarCheck, label: "我的签到" },
   { href: "/me/privacy", icon: Lock, label: "隐私设置" },
   { href: "/me/articles", icon: FileText, label: "我的发布" },
   { href: "/me/messages", icon: Bell, label: "我的消息" },

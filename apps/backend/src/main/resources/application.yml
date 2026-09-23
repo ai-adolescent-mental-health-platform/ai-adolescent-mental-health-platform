@@ -57,6 +57,22 @@ dashscope:
     # 千问AI平台业务空间 ID。带业务空间归属的 API Key 必须携带它，否则鉴权/模型路由会失败。
     # 非机密标识符（不能单独用于鉴权），仍可用 DASHSCOPE_WORKSPACE_ID 覆盖以切换业务空间。
     workspace: ${DASHSCOPE_WORKSPACE_ID:llm-0ixuo0u1xxcrv4gx}
+    # 文字咨询与签到分析共用的对话模型，统一软编码（见签到模块设计 6.3）
+    chat-model: ${DASHSCOPE_CHAT_MODEL:qwen3-max}
+
+checkin:
+  analysis:
+    executor:
+      core-pool-size: ${CHECKIN_EXECUTOR_CORE_POOL_SIZE:2}
+      max-pool-size: ${CHECKIN_EXECUTOR_MAX_POOL_SIZE:4}
+      queue-capacity: ${CHECKIN_EXECUTOR_QUEUE_CAPACITY:200}
+    connect-timeout: ${CHECKIN_ANALYSIS_CONNECT_TIMEOUT:30000}
+    read-timeout: ${CHECKIN_ANALYSIS_READ_TIMEOUT:30000}
+    enable-thinking: ${CHECKIN_ANALYSIS_ENABLE_THINKING:true}
+    max-per-day: ${CHECKIN_ANALYSIS_MAX_PER_DAY:3}
+  risk:
+    # 危机关键词硬兜底词表（逗号分隔，由心理专业同事持续迭代）
+    keywords: ${CHECKIN_RISK_KEYWORDS:自杀,轻生,自残,不想活,活不下去,结束生命,伤害自己,想死,去死}
 
 send:
   mail:

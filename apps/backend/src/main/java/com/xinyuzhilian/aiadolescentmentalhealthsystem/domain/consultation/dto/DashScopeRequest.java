@@ -6,7 +6,7 @@ import java.util.List;
 
 @Data
 public class DashScopeRequest {
-    private String model = "qwen3-max";
+    private String model;
     private List<DashScopeMessage> messages;
     private boolean stream = true;
     private double top_p = 0.8;

@@ -10,6 +10,7 @@ import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.pojo.AiSession;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.mapper.AiMessageMapper;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.mapper.AiSessionMapper;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.service.IAiConsultationService;
+import com.xinyuzhilian.aiadolescentmentalhealthsystem.utils.DashScopeHttpSupport;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,9 +20,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.net.HttpURLConnection;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -40,7 +39,9 @@ public class AiConsultationServiceImpl implements IAiConsultationService {
     @Value("${dashscope.api.key}")
     private String apiKey;
 
-    private static final String DASHSCOPE_API_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
+    @Value("${dashscope.api.chat-model}")
+    private String chatModel;
+
     private static final ExecutorService executor = Executors.newCachedThreadPool();
 
     private static final String SYSTEM_PROMPT = "【角色定位】\n" +
@@ -145,6 +146,7 @@ public class AiConsultationServiceImpl implements IAiConsultationService {
                 .last("LIMIT 20")); // Simple context window
 
         DashScopeRequest request = new DashScopeRequest();
+        request.setModel(chatModel);
         List<DashScopeRequest.DashScopeMessage> messages = new ArrayList<>();
         messages.add(new DashScopeRequest.DashScopeMessage("system", SYSTEM_PROMPT));
         
@@ -164,18 +166,9 @@ public class AiConsultationServiceImpl implements IAiConsultationService {
         executor.submit(() -> {
             StringBuilder fullContent = new StringBuilder();
             try {
-                URL url = new URL(DASHSCOPE_API_URL);
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("POST");
-                conn.setRequestProperty("Authorization", "Bearer " + apiKey);
-                conn.setRequestProperty("Content-Type", "application/json");
-                conn.setDoOutput(true);
-
                 String jsonBody = JSON.toJSONString(request);
-                try (OutputStream os = conn.getOutputStream()) {
-                    byte[] input = jsonBody.getBytes(StandardCharsets.UTF_8);
-                    os.write(input, 0, input.length);
-                }
+                // 共享骨架：与签到分析的非流式调用走同一份连接建立逻辑
+                HttpURLConnection conn = DashScopeHttpSupport.openJsonPost(apiKey, jsonBody, 0, 0);
 
                 try (InputStream is = conn.getInputStream();
                      BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
