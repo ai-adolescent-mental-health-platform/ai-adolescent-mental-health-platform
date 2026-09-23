@@ -1,6 +1,5 @@
 package com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.checkin.vo;
 
-import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.pojo.CheckinAnalysis;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.pojo.CheckinMoodTag;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.pojo.UserCheckin;
 import io.swagger.annotations.ApiModel;
@@ -23,5 +22,5 @@ public class CheckinTodayVO {
     private List<CheckinMoodTag> tags;
 
     @ApiModelProperty(value = "分析结果（null 表示未触发分析）")
-    private CheckinAnalysis analysis;
+    private CheckinAnalysisVO analysis;
 }

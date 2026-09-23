@@ -214,13 +214,10 @@ export type CheckinRecord = {
 
 export type CheckinAnalysis = {
   id?: number;
-  checkinId?: number;
   status?: number;
-  riskLevel?: number;
   userFeedback?: string;
   suggestion?: string;
-  riskReason?: string;
-  createTime?: string;
+  finishedAt?: string;
 };
 
 export type CheckinToday = {
@@ -247,6 +244,5 @@ export type CheckinHistoryItem = {
   diaryContent?: string;
   tags: CheckinMoodTag[];
   analysisStatus?: number;
-  riskLevel?: number;
   createTime?: string;
 };

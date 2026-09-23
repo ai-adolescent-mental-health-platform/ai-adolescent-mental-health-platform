@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.checkin.dto.CheckinSubmitDTO;
+import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.checkin.vo.CheckinAnalysisVO;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.checkin.vo.CheckinHistoryVO;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.checkin.vo.CheckinStatsVO;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.checkin.vo.CheckinTodayVO;
@@ -23,6 +24,7 @@ import com.xinyuzhilian.aiadolescentmentalhealthsystem.service.ICheckinService;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.service.IDictDataService;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.utils.CheckinLogic;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +41,9 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class CheckinServiceImpl implements ICheckinService {
+
+    /** 日记正文长度上限（信任边界：同时保护入库与 LLM 调用） */
+    private static final int MAX_DIARY_LENGTH = 2000;
 
     private final UserCheckinMapper userCheckinMapper;
     private final UserCheckinMoodTagMapper userCheckinMoodTagMapper;
@@ -77,6 +82,10 @@ public class CheckinServiceImpl implements ICheckinService {
         int avgPolarity = CheckinLogic.avgPolarity(polarities);
 
         String diary = normalize(dto.getDiaryContent());
+        // 信任边界：日记正文会入库并直发 LLM，此处限长（项目未引入 Bean Validation，按现有风格显式校验）
+        if (diary != null && diary.length() > MAX_DIARY_LENGTH) {
+            throw new ServiceException("日记内容不能超过 " + MAX_DIARY_LENGTH + " 字");
+        }
 
         UserCheckin checkin = new UserCheckin();
         checkin.setUserId(userId);
@@ -84,7 +93,21 @@ public class CheckinServiceImpl implements ICheckinService {
         checkin.setMoodPolarity(avgPolarity);
         checkin.setDiaryContent(diary);
         checkin.setContentLength(diary == null ? 0 : diary.length());
-        userCheckinMapper.insert(checkin);
+        try {
+            userCheckinMapper.insert(checkin);
+        } catch (DuplicateKeyException e) {
+            // 并发同日提交：唯一键 uk_user_checkin_date 拦下后回查，返回既有记录而非 500。
+            // RR 快照可能读不到刚提交的并发行，此时降级为明确的业务提示。
+            UserCheckin concurrent = userCheckinMapper.selectOne(
+                    new LambdaQueryWrapper<UserCheckin>()
+                            .eq(UserCheckin::getUserId, userId)
+                            .eq(UserCheckin::getCheckinDate, today)
+            );
+            if (concurrent != null) {
+                return Result.success(buildTodayVO(concurrent));
+            }
+            throw new ServiceException("今日已完成签到");
+        }
 
         for (Integer tagId : distinctTagIds) {
             UserCheckinMoodTag rel = new UserCheckinMoodTag();
@@ -229,7 +252,7 @@ public class CheckinServiceImpl implements ICheckinService {
     }
 
     @Override
-    public Result<CheckinAnalysis> getAnalysis(Long userId, Long checkinId) {
+    public Result<CheckinAnalysisVO> getAnalysis(Long userId, Long checkinId) {
         UserCheckin checkin = userCheckinMapper.selectById(checkinId);
         if (checkin == null || !checkin.getUserId().equals(userId)) {
             throw new ServiceException(403, "无权访问该签到记录");
@@ -237,7 +260,8 @@ public class CheckinServiceImpl implements ICheckinService {
         CheckinAnalysis analysis = checkinAnalysisMapper.selectOne(
                 new LambdaQueryWrapper<CheckinAnalysis>().eq(CheckinAnalysis::getCheckinId, checkinId)
         );
-        return Result.success(analysis);
+        // 用户侧只下发脱敏视图，平台字段（riskLevel/riskReason/errorMsg）不出后端
+        return Result.success(CheckinAnalysisVO.from(analysis));
     }
 
     private CheckinTodayVO buildTodayVO(UserCheckin checkin) {
@@ -257,7 +281,7 @@ public class CheckinServiceImpl implements ICheckinService {
         CheckinAnalysis analysis = checkinAnalysisMapper.selectOne(
                 new LambdaQueryWrapper<CheckinAnalysis>().eq(CheckinAnalysis::getCheckinId, checkin.getId())
         );
-        vo.setAnalysis(analysis);
+        vo.setAnalysis(CheckinAnalysisVO.from(analysis));
         return vo;
     }
 
@@ -280,7 +304,6 @@ public class CheckinServiceImpl implements ICheckinService {
         );
         if (analysis != null) {
             vo.setAnalysisStatus(analysis.getStatus());
-            vo.setRiskLevel(analysis.getRiskLevel());
         }
         return vo;
     }

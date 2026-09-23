@@ -1,12 +1,12 @@
 package com.xinyuzhilian.aiadolescentmentalhealthsystem.service;
 
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.checkin.dto.CheckinSubmitDTO;
+import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.checkin.vo.CheckinAnalysisVO;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.checkin.vo.CheckinHistoryVO;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.checkin.vo.CheckinStatsVO;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.checkin.vo.CheckinTodayVO;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.common.PageResult;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.common.Result;
-import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.pojo.CheckinAnalysis;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.pojo.CheckinMoodTag;
 
 import java.util.List;
@@ -47,7 +47,8 @@ public interface ICheckinService {
     Result<CheckinStatsVO> getStats(Long userId);
 
     /**
-     * 获取分析结果（前端轮询用），校验记录归属
+     * 获取分析结果（前端轮询用），校验记录归属。
+     * 返回用户侧脱敏视图，不含平台判定字段。
      */
-    Result<CheckinAnalysis> getAnalysis(Long userId, Long checkinId);
+    Result<CheckinAnalysisVO> getAnalysis(Long userId, Long checkinId);
 }

@@ -2,12 +2,12 @@ package com.xinyuzhilian.aiadolescentmentalhealthsystem.controller;
 
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.annotation.CurrentUserId;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.checkin.dto.CheckinSubmitDTO;
+import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.checkin.vo.CheckinAnalysisVO;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.checkin.vo.CheckinHistoryVO;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.checkin.vo.CheckinStatsVO;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.checkin.vo.CheckinTodayVO;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.common.PageResult;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.common.Result;
-import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.pojo.CheckinAnalysis;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.pojo.CheckinMoodTag;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.service.ICheckinService;
 import lombok.RequiredArgsConstructor;
@@ -83,10 +83,10 @@ public class CheckinController {
     }
 
     /**
-     * 获取分析结果（前端轮询用）
+     * 获取分析结果（前端轮询用）。返回用户侧脱敏视图，不含平台判定字段。
      */
     @GetMapping("/analysis/{checkinId}")
-    public Result<CheckinAnalysis> analysis(
+    public Result<CheckinAnalysisVO> analysis(
             @CurrentUserId Long userId,
             @PathVariable Long checkinId) {
         return checkinService.getAnalysis(userId, checkinId);

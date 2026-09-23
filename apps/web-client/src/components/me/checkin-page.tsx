@@ -147,7 +147,7 @@ export function CheckinPage() {
                         {item.analysisStatus == null
                           ? "未分析"
                           : item.analysisStatus === 2
-                            ? (item.riskLevel === 0 ? "平稳" : item.riskLevel === 1 ? "关注" : "危机")
+                            ? "已完成"
                             : "分析中"}
                       </span>
                     </div>

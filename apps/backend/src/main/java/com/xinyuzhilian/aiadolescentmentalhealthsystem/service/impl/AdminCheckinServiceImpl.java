@@ -80,11 +80,18 @@ public class AdminCheckinServiceImpl implements IAdminCheckinService {
 
     @Override
     public Result<String> handle(Long id, Long handlerId, AlertHandleDTO dto) {
+        Integer status = dto.getStatus();
+        // 处置状态白名单：只接受 1-处置中 / 2-已处置 / 3-已忽略，越界值不得落库
+        if (status == null || (status != RiskAlert.STATUS_PROCESSING
+                && status != RiskAlert.STATUS_RESOLVED
+                && status != RiskAlert.STATUS_IGNORED)) {
+            throw new ServiceException("无效的处置状态");
+        }
         RiskAlert alert = riskAlertMapper.selectById(id);
         if (alert == null) {
             throw new ServiceException("预警记录不存在");
         }
-        alert.setStatus(dto.getStatus());
+        alert.setStatus(status);
         alert.setHandlerId(handlerId);
         alert.setHandleNote(dto.getHandleNote());
         alert.setHandledAt(LocalDateTime.now());

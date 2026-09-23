@@ -3,6 +3,7 @@ package com.xinyuzhilian.aiadolescentmentalhealthsystem.service.impl;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.checkin.dto.CheckinSubmitDTO;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.checkin.vo.CheckinTodayVO;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.common.Result;
+import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.pojo.CheckinMoodTag;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.pojo.UserCheckin;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.exception.ServiceException;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.mapper.CheckinAnalysisMapper;
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DuplicateKeyException;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -61,6 +63,54 @@ class CheckinServiceImplTest {
         assertEquals(100L, result.getData().getCheckin().getId());
         verify(userCheckinMapper, never()).insert(any(UserCheckin.class));
         verify(checkinAnalysisService, never()).scheduleIfNeeded(any(), any(), any());
+    }
+
+    // ========== 建议修复 4：并发同日提交撞唯一键 → 回查返回既有记录 ==========
+
+    @Test
+    void submit_并发撞唯一键_回查返回既有记录() {
+        UserCheckin concurrent = new UserCheckin();
+        concurrent.setId(200L);
+        concurrent.setUserId(1L);
+        concurrent.setCheckinDate(LocalDate.now());
+
+        // 首次查无记录 → 进入插入；插入撞并发唯一键 → 回查取到并发行
+        when(userCheckinMapper.selectOne(any())).thenReturn(null, concurrent);
+        when(checkinMoodTagMapper.selectBatchIds(any())).thenReturn(List.of(moodTag()));
+        when(userCheckinMapper.insert(any(UserCheckin.class)))
+                .thenThrow(new DuplicateKeyException("uk_user_checkin_date"));
+        when(userCheckinMoodTagMapper.selectList(any())).thenReturn(List.of());
+        when(checkinAnalysisMapper.selectOne(any())).thenReturn(null);
+
+        CheckinSubmitDTO dto = new CheckinSubmitDTO();
+        dto.setTagIds(List.of(1));
+        Result<CheckinTodayVO> result = checkinService.submit(1L, dto);
+
+        assertEquals(200L, result.getData().getCheckin().getId(), "并发撞键应返回既有记录而非 500");
+        verify(checkinAnalysisService, never()).scheduleIfNeeded(any(), any(), any());
+    }
+
+    // ========== 建议修复 5：日记正文长度上限（信任边界） ==========
+
+    @Test
+    void submit_日记超长_拒绝() {
+        when(userCheckinMapper.selectOne(any())).thenReturn(null);
+        when(checkinMoodTagMapper.selectBatchIds(any())).thenReturn(List.of(moodTag()));
+
+        CheckinSubmitDTO dto = new CheckinSubmitDTO();
+        dto.setTagIds(List.of(1));
+        dto.setDiaryContent("字".repeat(2001));
+
+        ServiceException ex = assertThrows(ServiceException.class, () -> checkinService.submit(1L, dto));
+        assertTrue(ex.getMessage().contains("2000"));
+        verify(userCheckinMapper, never()).insert(any(UserCheckin.class));
+    }
+
+    private CheckinMoodTag moodTag() {
+        CheckinMoodTag tag = new CheckinMoodTag();
+        tag.setId(1);
+        tag.setPolarity(2);
+        return tag;
     }
 
     // ========== 8. 归属校验 ==========

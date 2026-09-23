@@ -34,9 +34,6 @@ public class CheckinHistoryVO {
     @ApiModelProperty(value = "分析状态（null 表示未触发分析）")
     private Integer analysisStatus;
 
-    @ApiModelProperty(value = "预警等级（null 表示未分析或分析失败）")
-    private Integer riskLevel;
-
     @ApiModelProperty(value = "创建时间")
     private LocalDateTime createTime;
 }

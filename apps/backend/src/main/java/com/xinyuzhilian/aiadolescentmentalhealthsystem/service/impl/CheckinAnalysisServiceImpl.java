@@ -1,6 +1,7 @@
 package com.xinyuzhilian.aiadolescentmentalhealthsystem.service.impl;
 
 import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.xinyuzhilian.aiadolescentmentalhealthsystem.domain.checkin.dto.AnalysisResult;
@@ -107,10 +108,18 @@ public class CheckinAnalysisServiceImpl implements ICheckinAnalysisService {
         );
         final Long analysisId;
         if (existing != null) {
+            // 重跑：状态与上一轮结论一并清空，避免新分析失败时用户读到旧反馈配新状态
             existing.setStatus(CheckinAnalysis.STATUS_PENDING);
             existing.setRetryCount(0);
             existing.setErrorMsg(null);
             existing.setRiskLevel(null);
+            existing.setRiskReason(null);
+            existing.setUserFeedback(null);
+            existing.setSuggestion(null);
+            existing.setModel(null);
+            existing.setPromptTokens(null);
+            existing.setCompletionTokens(null);
+            existing.setStartedAt(null);
             existing.setFinishedAt(null);
             existing.setUpdateTime(now);
             checkinAnalysisMapper.updateById(existing);
@@ -192,8 +201,19 @@ public class CheckinAnalysisServiceImpl implements ICheckinAnalysisService {
             return;
         }
 
+        String diary = checkin.getDiaryContent();
+
+        // 关键词兜底前置：命中即落预警，不依赖模型可用性。
+        // 危机场景下模型可能超时/限流/解析异常，兜底若跟在模型之后会随之一并失效。
+        CheckinLogic.KeywordHit hit = CheckinLogic.scanKeyword(diary, getKeywords());
+        boolean keywordCrisis = hit != null;
+        if (keywordCrisis) {
+            upsertAlert(checkin.getUserId(), checkin.getId(), RiskAlert.TRIGGER_KEYWORD,
+                    "命中危机关键词「" + hit.keyword() + "」", hit.sentence());
+        }
+
         try {
-            String response = dashScopeClient.chat(SYSTEM_PROMPT, checkin.getDiaryContent());
+            String response = dashScopeClient.chat(SYSTEM_PROMPT, diary);
             ParsedAnalysis parsed = parse(response);
 
             Integer finalLevel = parsed.result.getRiskLevel();
@@ -202,16 +222,15 @@ public class CheckinAnalysisServiceImpl implements ICheckinAnalysisService {
             String userFeedback = parsed.result.getUserFeedback();
             String triggerType = RiskAlert.TRIGGER_MODEL;
 
-            // 关键词硬兜底：命中则无论模型判定如何，强制危机级
-            CheckinLogic.KeywordHit hit = CheckinLogic.scanKeyword(checkin.getDiaryContent(), getKeywords());
-            if (hit != null) {
+            // 关键词命中优先级最高：无论模型判什么，等级强制 2
+            if (keywordCrisis) {
                 finalLevel = 2;
                 triggerType = RiskAlert.TRIGGER_KEYWORD;
                 evidence = hit.sentence();
                 riskReason = "命中危机关键词「" + hit.keyword() + "」";
             }
 
-            // 危机级：求助渠道存在性校验 + 预警落库（待处置）
+            // 危机级：求助渠道存在性校验 + 预警落库（幂等覆盖，保留处置状态）
             if (finalLevel != null && finalLevel == 2) {
                 userFeedback = ensureHelpChannel(userFeedback);
                 upsertAlert(checkin.getUserId(), checkin.getId(), triggerType, riskReason, evidence);
@@ -228,8 +247,21 @@ public class CheckinAnalysisServiceImpl implements ICheckinAnalysisService {
             analysis.setFinishedAt(LocalDateTime.now());
             checkinAnalysisMapper.updateById(analysis);
         } catch (Exception e) {
-            log.error("签到分析失败, analysisId={}", analysisId, e);
-            markFailed(analysis, e.getMessage());
+            if (keywordCrisis) {
+                // 预警已在模型调用前落库，这里只收尾分析记录：
+                // 不得因模型失败把已兜底的危机降级成“未分析”
+                analysis.setStatus(CheckinAnalysis.STATUS_SUCCESS);
+                analysis.setRiskLevel(2);
+                analysis.setRiskReason("命中危机关键词「" + hit.keyword() + "」（模型判定失败：" + truncate(e.getMessage()) + "）");
+                analysis.setUserFeedback(HELP_TEXT);
+                analysis.setModel("keyword-fallback");
+                analysis.setFinishedAt(LocalDateTime.now());
+                checkinAnalysisMapper.updateById(analysis);
+                log.warn("模型调用失败但关键词兜底已生效, analysisId={}", analysisId, e);
+            } else {
+                log.error("签到分析失败, analysisId={}", analysisId, e);
+                markFailed(analysis, e.getMessage());
+            }
         }
     }
 
@@ -288,13 +320,33 @@ public class CheckinAnalysisServiceImpl implements ICheckinAnalysisService {
         checkinAnalysisMapper.updateById(analysis);
     }
 
+    /**
+     * 解析 DashScope 响应。
+     *
+     * 响应是 OpenAI 兼容信封：{ id, choices: [{ message: { content } }], usage }
+     * 业务 JSON 在 choices[0].message.content 内，token 用量在根级 usage，
+     * 两者必须分别取——直接对信封根解析会拿到全空字段。
+     */
     private ParsedAnalysis parse(String response) {
-        String json = response.trim();
-        // 容错剥离 markdown 代码围栏
-        if (json.startsWith("```")) {
-            json = json.replaceFirst("^```(?:json)?\\s*", "").replaceFirst("\\s*```$", "");
+        JSONObject envelope = JSON.parseObject(response.trim());
+
+        JSONArray choices = envelope.getJSONArray("choices");
+        if (choices == null || choices.isEmpty()) {
+            throw new IllegalStateException("DashScope 响应缺少 choices");
         }
-        JSONObject obj = JSON.parseObject(json);
+        JSONObject choice = choices.getJSONObject(0);
+        JSONObject message = choice == null ? null : choice.getJSONObject("message");
+        String content = message == null ? null : message.getString("content");
+        if (content == null || content.isBlank()) {
+            throw new IllegalStateException("DashScope 响应缺少 choices[0].message.content");
+        }
+
+        // 模型有时会包 markdown 代码围栏，剥离后再解析业务 JSON
+        String body = content.trim();
+        if (body.startsWith("```")) {
+            body = body.replaceFirst("^```(?:json)?\\s*", "").replaceFirst("\\s*```$", "");
+        }
+        JSONObject obj = JSON.parseObject(body);
 
         AnalysisResult result = new AnalysisResult();
         result.setRiskLevel(obj.getInteger("risk_level"));
@@ -303,7 +355,7 @@ public class CheckinAnalysisServiceImpl implements ICheckinAnalysisService {
         result.setUserFeedback(obj.getString("user_feedback"));
         result.setSuggestion(obj.getString("suggestion"));
 
-        JSONObject usage = obj.getJSONObject("usage");
+        JSONObject usage = envelope.getJSONObject("usage");
         int promptTokens = usage == null ? 0 : usage.getIntValue("prompt_tokens");
         int completionTokens = usage == null ? 0 : usage.getIntValue("completion_tokens");
         return new ParsedAnalysis(result, promptTokens, completionTokens);

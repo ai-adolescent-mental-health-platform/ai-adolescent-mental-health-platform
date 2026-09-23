@@ -10,9 +10,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.net.HttpURLConnection;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,16 +18,14 @@ import java.util.List;
 /**
  * 非流式 DashScope 对话客户端
  *
- * 复用 AiConsultationServiceImpl 的 HttpURLConnection 骨架，走同一个
- * OpenAI 兼容端点，区别是这里一次性读完整 body（非 SSE 逐行解析），
- * 供签到分析流水线使用。模型与文字咨询共用 dashscope.api.chat-model。
+ * 与 xiaoai 流式对话（AiConsultationServiceImpl）共用
+ * {@link DashScopeHttpSupport} 的连接骨架，走同一个 OpenAI 兼容端点，
+ * 区别是这里一次性读完整 body（非 SSE 逐行解析），供签到分析流水线使用。
+ * 模型与文字咨询共用 dashscope.api.chat-model。
  */
 @Component
 @Slf4j
 public class DashScopeClient {
-
-    private static final String DASHSCOPE_API_URL =
-            "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
 
     @Value("${dashscope.api.key}")
     private String apiKey;
@@ -65,28 +61,20 @@ public class DashScopeClient {
         messages.add(new DashScopeRequest.DashScopeMessage("user", userContent));
         request.setMessages(messages);
 
-        URL url = new URL(DASHSCOPE_API_URL);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Authorization", "Bearer " + apiKey);
-        conn.setRequestProperty("Content-Type", "application/json");
-        conn.setConnectTimeout(connectTimeout);
-        conn.setReadTimeout(readTimeout);
-        conn.setDoOutput(true);
-
+        // 共享骨架：与 xiaoai 流式对话走同一份连接建立逻辑
         String jsonBody = JSON.toJSONString(request);
-        try (OutputStream os = conn.getOutputStream()) {
-            byte[] input = jsonBody.getBytes(StandardCharsets.UTF_8);
-            os.write(input, 0, input.length);
-        }
+        HttpURLConnection conn = DashScopeHttpSupport.openJsonPost(apiKey, jsonBody, connectTimeout, readTimeout);
 
         int code = conn.getResponseCode();
         InputStream is = (code >= 200 && code < 300) ? conn.getInputStream() : conn.getErrorStream();
         StringBuilder body = new StringBuilder();
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                body.append(line);
+        // 错误分支的 errorStream 可能为 null，直接交给 InputStreamReader 会 NPE 并掩盖真实状态码
+        if (is != null) {
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    body.append(line);
+                }
             }
         }
 
